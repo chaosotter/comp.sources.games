@@ -137,19 +137,23 @@ Equipment: Red Reflec Armour, Laser Pistol, Laser Barrel (red),
 	t.Execute(os.Stdout, s)
 }
 
-// Choose offers the player an A/B choice.  The return value is the page number
-// associated with that choice.
-func (s *State) Choose(aPage int, a string, bPage int, b string) int {
-	fmt.Println("\nSelect 'a' or 'b' :")
-	fmt.Printf("  a - %s.\n", a)
-	fmt.Printf("  b - %s.\n", b)
+// Choice represents one of the options passed to the Choose method.
+type Choice struct {
+	page int
+	text string
+}
+
+// Choose offers the player a choice among several options.  The return value
+// is the page number associated with that choice.
+func (s *State) Choose(opts ...Choice) int {
+	fmt.Println("\nSelect one of the following:")
+	for i, opt := range opts {
+		fmt.Printf("  %c - %s.\n", 'a'+i, opt.text)
+	}
 
 	for ch := GetChar(); ; ch = GetChar() {
-		switch ch {
-		case 'a':
-			return aPage
-		case 'b':
-			return bPage
+		if i := ch - 'a'; 0 <= i && i < byte(len(opts)) {
+			return opts[i].page
 		}
 	}
 }
@@ -284,8 +288,9 @@ Christmas.  The Computer says, "That is an A-1 ULTRAVIOLET ONLY IMMEDIATE
 TERMINATION classified topic.  What is your clearance please, Troubleshooter?"
 `)
 		return s.Choose(
-			4, "You give your correct clearance",
-			5, "You lie and claim Ultraviolet clearance")
+			Choice{4, "You give your correct clearance"},
+			Choice{5, "You lie and claim Ultraviolet clearance"},
+		)
 	},
 
 	4: func(*State) int {
@@ -307,8 +312,9 @@ arrives carrying a white bundle.  He asks you to sign for it, then hands it to
 you and stands back, well outside of a fragmentation grenade's blast radius.
 `)
 		return s.Choose(
-			6, "You open the package and put on the uniform",
-			7, "You finally come to your senses and run for it")
+			Choice{6, "You open the package and put on the uniform"},
+			Choice{7, "You finally come to your senses and run for it"},
+		)
 	},
 
 	6: func(s *State) int {
@@ -388,8 +394,9 @@ Inside, you can see an IS agent cheerfully greet an infrared citizen and then
 lead him at gunpoint into one of the rubber lined discussion rooms.
 `)
 		ch := s.Choose(
-			2, "You decide to stop here and chat, as ordered by The Computer",
-			10, "You just continue blithely on past")
+			Choice{2, "You decide to stop here and chat, as ordered by The Computer"},
+			Choice{10, "You just continue blithely on past"},
+		)
 		s.Flags.ComputerRequest = (ch == 2)
 		return ch
 	},
@@ -407,15 +414,16 @@ to nowhere.
 
 		if !s.Flags.Ultraviolet {
 			if ch := s.Choose(
-				3, "You decide to ask The Computer about Christmas using a nearby terminal",
-				10, "You think you have the route worked out, so you'll board a tube train"); ch == 3 {
+				Choice{3, "You decide to ask The Computer about Christmas using a nearby terminal"},
+				Choice{10, "You think you have the route worked out, so you'll board a tube train"},
+			); ch == 3 {
 				return ch
 			}
 		}
 		fmt.Println("\nYou nervously select a tubecar and step aboard.")
 
 		if DiceRoll(2, 10) < s.Abilities.Moxie {
-			fmt.Println("You just caught a purple line tubecar.")
+			fmt.Println("\nYou just caught a purple line tubecar.")
 			return 13
 		}
 		fmt.Println("\nYou just caught a brown line tubecar.")
@@ -460,8 +468,57 @@ the megabolts holding the door shut.  You are now free to continue the
 mission.
 `)
 		return s.Choose(
-			3, "You wish to ask The Computer for more information about Christmas",
-			10, "You have decided to go directly to Goods Distribution Hall 7-beta")
+			Choice{3, "You wish to ask The Computer for more information about Christmas"},
+			Choice{10, "You have decided to go directly to Goods Distribution Hall 7-beta"},
+		)
+	},
+
+	12: func(s *State) int {
+		fmt.Print(`
+You walk up to the door and push the button labelled "push to exit."
+
+Within seconds a surly looking guard shoves his face into the small plexiglass
+window.  You can see his mouth forming words but you can't hear any of them.
+You just stare at him blankly for a few moments until he points down to a
+speaker on your side of the door.  When you put your ear to it you can barely
+hear him say, "Let's see your briefing release form, bud.  You aren't
+getting out of here without it."
+`)
+		return s.Choose(
+			Choice{11, "You sit down at the table and read the Orange packet"},
+			Choice{57, "You stare around the room some more"},
+		)
+	},
+
+	13: func(*State) int {
+		fmt.Print(`
+You step into the shiny plasteel tubecar, wondering why the shape has always
+reminded you of bullets.  The car shoots forward the instant your feet touch
+the slippery gray floor, pinning you immobile against the back wall as the
+tubecar careens toward GDH7-beta.  Your only solace is the knowledge that it
+could be worse, much worse.
+
+Before too long the car comes to a stop.  You can see signs for GDH7-beta
+through the window.  With a little practice you discover that you can crawl
+to the door and pull open the latch.
+`)
+		return 14
+	},
+
+	14: func(*State) int {
+		fmt.Print(`
+You manage to pull yourself out of the tubecar and look around.  Before you is
+one of the most confusing things you have ever seen, a hallway that is
+simultaneously both red and green clearance.  If this is the result of
+Christmas then it's easy to see the evils inherent in its practice.
+
+You are in the heart of a large goods distribution centre.  You can see all
+about you evidence of traitorous secret society Christmas celebration; rubber
+faced robots whiz back and forth selling toys to holiday shoppers, simul-plast
+wreaths hang from every light fixture, while ahead in the shadows is a citizen
+wearing a huge red synthetic flower.
+`)
+		return 22
 	},
 
 	57: func(s *State) int {
@@ -470,52 +527,13 @@ In the centre of the room is a table and a single chair.  There is an Orange
 folder on the table top, but you can\'t make out the lettering on it.
 `)
 		return s.Choose(
-			11, "You sit down and read the folder",
-			12, "You leave the room")
+			Choice{11, "You sit down and read the folder"},
+			Choice{12, "You leave the room"},
+		)
 	},
 }
 
 /*
-
-page12()
-{
-	printf("You walk up to the door and push the button labelled \"push to exit.\"\n");
-	printf("Within seconds a surly looking guard shoves his face into the small plexiglass\n");
-	printf("window.  You can see his mouth forming words but you can\'t hear any of them.\n");
-	printf("You just stare at him blankly  for a few moments until he points down to a\n");
-	printf("speaker on your side of the door.  When you put your ear to it you can barely\n");
-	printf("hear him say, \"Let\'s see your briefing release form, bud.  You aren\'t\n");
-	printf("getting out of here without it.\"\n");
-	return choose(11,"You sit down at the table and read the Orange packet",57,"You stare around the room some more");
-}
-
-page13()
-{
-	printf("You step into the shiny plasteel tubecar, wondering why the shape has always\n");
-	printf("reminded you of bullets.  The car shoots forward the instant your feet touch\n");
-	printf("the slippery gray floor, pinning you immobile against the back wall as the\n");
-	printf("tubecar careens toward GDH7-beta.  Your only solace is the knowledge that it\n");
-	printf("could be worse, much worse.\n");
-	printf("Before too long the car comes to a stop.  You can see signs for GDH7-beta\n");
-	printf("through the window.  With a little practice you discover that you can crawl\n");
-	printf("to the door and pull open the latch.\n");
-	return 14;
-}
-
-page14()
-{
-	printf("You manage to pull yourself out of the tubecar and look around.  Before you is\n");
-	printf("one of the most confusing things you have ever seen, a hallway that is\n");
-	printf("simultaneously both red and green clearance.  If this is the result of\n");
-	printf("Christmas then it\'s easy to see the evils inherent in its practice.\n");
-	printf("You are in the heart of a large goods distribution centre.  You can see all\n");
-	printf("about you evidence of traitorous secret society Christmas celebration; rubber\n");
-	printf("faced robots whiz back and forth selling toys to holiday shoppers, simul-plast\n");
-	printf("wreaths hang from every light fixture, while ahead in the shadows is a citizen\n");
-	printf("wearing a huge red synthetic flower.\n");
-	return 22;
-}
-
 page15()
 {
 	printf("You are set upon by a runty robot with a queer looking face and two pointy\n");
