@@ -521,6 +521,38 @@ wearing a huge red synthetic flower.
 		return 22
 	},
 
+	15: func(s *State) int {
+		fmt.Print(`
+You are set upon by a runty robot with a queer looking face and two pointy
+rubber ears poking from beneath a tattered cap.  "Hey mister," it says,
+you done all your last minute Christmas shopping?  I got some real neat junk
+here.  You don't wanna miss the big day tommorrow, if you know what I mean."
+
+The robot opens its bag to show you a pile of shoddy Troubleshooter dolls.  It
+reaches in and pulls out one of them.  "Look, these Action Troubleshooter(tm)
+dolls are the neatest thing.  This one's got moveable arms and when you
+squeeze him, his little rifle squirts realistic looking napalm.  It's only
+50 credits.  Oh yeah, Merry Christmas."
+`)
+		return s.Choose(
+			Choice{16, "You decide to buy the doll"},
+			Choice{17, "You shoot the robot"},
+			Choice{22, "You ignore the robot and keep searching the hall"},
+		)
+	},
+
+	16: func(s *State) int {
+		fmt.Print(`
+The doll is a good buy for fifty credits; it will make a fine Christmas present
+for one of your friends.  After the sale the robot rolls away.  You can use
+the doll later in combat.  It works just like a cone rifle firing napalm,
+except that occasionally it will explode and blow the user to smithereens.
+But don't let that stop you.
+`)
+		s.Flags.ActionDoll = true
+		return 22
+	},
+
 	57: func(s *State) int {
 		fmt.Print(`
 In the centre of the room is a table and a single chair.  There is an Orange
@@ -534,41 +566,6 @@ folder on the table top, but you can\'t make out the lettering on it.
 }
 
 /*
-page15()
-{
-	printf("You are set upon by a runty robot with a queer looking face and two pointy\n");
-	printf("rubber ears poking from beneath a tattered cap.  \"Hey mister,\" it says,\n");
-	printf("\"you done all your last minute Christmas shopping?  I got some real neat junk\n");
-	printf("here.  You don\'t wanna miss the big day tommorrow, if you know what I mean.\"\n");
-	printf("The robot opens its bag to show you a pile of shoddy Troubleshooter dolls.  It\n");
-	printf("reaches in and pulls out one of them.  \"Look, these Action Troubleshooter(tm)\n");
-	printf("dolls are the neatest thing.  This one\'s got moveable arms and when you\n");
-	printf("squeeze him, his little rifle squirts realistic looking napalm.  It\'s only\n");
-	printf("50 credits.  Oh yeah, Merry Christmas.\"\n");
-	printf("\nSelect \'a\', \'b\' or \'c\' :\n");
-	printf(" a - You decide to buy the doll.\n");
-	printf(" b - You shoot the robot.\n");
-	printf(" c - You ignore the robot and keep searching the hall.\n");
-	switch(get_char())
-	{
-		case 'a' :	return 16;
-		case 'b' :	return 17;
-		case 'c' :
-		default  :	return 22;
-	}
-}
-
-page16()
-{
-	printf("The doll is a good buy for fifty credits; it will make a fine Christmas present\n");
-	printf("for one of your friends.  After the sale the robot rolls away.  You can use\n");
-	printf("the doll later in combat.  It works just like a cone rifle firing napalm,\n");
-	printf("except that occasionally it will explode and blow the user to smithereens.\n");
-	printf("But don\'t let that stop you.\n");
-	action_doll=1;
-	return 22;
-}
-
 page17()
 {
 	int i, robot_hp=15;
