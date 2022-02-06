@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 )
 
 var debug = flag.Bool("debug", false, "Turn on debugging mode.")
@@ -358,6 +360,68 @@ Suddenly, a computer terminal comes to life beside you.
 		return 8
 	},
 
+	8: func(*State) int {
+		fmt.Print(`
+"Now, about your question, citizen.  Christmas was an old world marketing ploy
+to induce lower clearance citizens to purchase vast quantities of goods, thus
+accumulating a large amount of credit under the control of a single class of
+citizen known as Retailers.  The strategy used is to imply that all good
+citizens give gifts during Christmas, thus if one wishes to be a valuable
+member of society one must also give gifts during Christmas.  More valuable
+gifts make one a more valuable member, and thus did the Retailers come to
+control a disproportionate amount of the currency.  In this way Christmas
+eventually caused the collapse of the old world.  Understandably, Christmas
+has been declared a treasonable practice in Alpha Complex.
+
+"Thank you for your inquiry."
+
+You continue on your way to GDH7-beta.
+`)
+		return 10
+	},
+
+	9: func(s *State) int {
+		fmt.Print(`
+As you walk toward the tubecar that will take you to GDH7-beta, you pass one
+of the bright blue and orange Internal Security self incrimination stations.
+Inside, you can see an IS agent cheerfully greet an infrared citizen and then
+lead him at gunpoint into one of the rubber lined discussion rooms.
+`)
+		ch := s.Choose(
+			2, "You decide to stop here and chat, as ordered by The Computer",
+			10, "You just continue blithely on past")
+		s.Flags.ComputerRequest = (ch == 2)
+		return ch
+	},
+
+	10: func(s *State) int {
+		fmt.Print(`
+You stroll briskly down the corridor, up a ladder, across an unrailed catwalk,
+under a perilously swinging blast door in urgent need of repair, and into
+tubecar grand central.  This is the bustling hub of Alpha Complex tubecar
+transportation.  Before you spreads a spaghetti maze of magnalift tube tracks
+and linear accelerators.  You bravely study the specially enhanced 3-D tube
+route map; you wouldn't be the first Troubleshooter to take a fast tube ride
+to nowhere.
+`)
+
+		if !s.Flags.Ultraviolet {
+			if ch := s.Choose(
+				3, "You decide to ask The Computer about Christmas using a nearby terminal",
+				10, "You think you have the route worked out, so you'll board a tube train"); ch == 3 {
+				return ch
+			}
+		}
+		fmt.Println("\nYou nervously select a tubecar and step aboard.")
+
+		if DiceRoll(2, 10) < s.Abilities.Moxie {
+			fmt.Println("You just caught a purple line tubecar.")
+			return 13
+		}
+		fmt.Println("\nYou just caught a brown line tubecar.")
+		return 48
+	},
+
 	11: func(s *State) int {
 		fmt.Print(`
 The printing on the folder says "Experimental Self Briefing."
@@ -412,71 +476,6 @@ folder on the table top, but you can\'t make out the lettering on it.
 }
 
 /*
-dice_roll(number,faces)
-int number, faces;
-{
-	int i,total=0;
-	for(i=number;i>0;i--)	total+= rand()%faces+1;
-	return total;
-}
-
-page8()
-{
-	printf("\"Now, about your question, citizen.  Christmas was an old world marketing ploy\n");
-	printf("to induce lower clearance citizens to purchase vast quantities of goods, thus\n");
-	printf("accumulation a large amount of credit under the control of a single class of\n");
-	printf("citizen known as Retailers.  The strategy used is to imply that all good\n");
-	printf("citizens give gifts during Christmas, thus if one wishes to be a valuable\n");
-	printf("member of society one must also give gifts during Christmas.  More valuable\n");
-	printf("gifts make one a more valuable member, and thus did the Retailers come to\n");
-	printf("control a disproportionate amount of the currency.  In this way Christmas\n");
-	printf("eventually caused the collapse of the old world.  Understandably, Christmas\n");
-	printf("has been declared a treasonable practice in Alpha Complex.\n");
-	printf("Thank you for your inquiry.\"\n");
-	printf("You continue on your way to GDH7-beta.\n");
-	return 10;
-}
-
-page9()
-{
-	int choice;
-	printf("As you walk toward the tubecar that will take you to GDH7-beta, you pass one\n");
-	printf("of the bright blue and orange Internal Security self incrimination stations.\n");
-	printf("Inside, you can see an IS agent cheerfully greet an infrared citizen and then\n");
-	printf("lead him at gunpoint into one of the rubber lined discussion rooms.\n");
-	choice=choose(2,"You decide to stop here and chat, as ordered by The Computer",10,"You just continue blithely on past");
-	if (choice==2) computer_request = 1;
-	else	       computer_request = 0;
-	return choice;
-}
-
-page10()
-{
-	int choice;
-	printf("You stroll briskly down the corridor, up a ladder, across an unrailed catwalk,\n");
-	printf("under a perilously swinging blast door in urgent need of repair, and into\n");
-	printf("tubecar grand central.  This is the bustling hub of Alpha Complex tubecar\n");
-	printf("transportation.  Before you spreads a spaghetti maze of magnalift tube tracks\n");
-	printf("and linear accelerators.  You bravely study the specially enhanced 3-D tube\n");
-	printf("route map; you wouldn\'t be the first Troubleshooter to take a fast tube ride\n");
-	printf("to nowhere.\n");
-	if (ultra_violet==0)
-	{
-		choice=choose(3,"You decide to ask The Computer about Christmas using a nearby terminal",10,"You think you have the route worked out, so you\'ll board a tube train");
-		if (choice==3) return choice;
-	};
-	printf("You nervously select a tubecar and step aboard.\n");
-	if (dice_roll(2,10)<MOXIE)
-	{
-		printf("You just caught a purple line tubecar.\n");
-		return 13;
-	}
-	else
-	{
-		printf("You just caught a brown line tubecar.\n");
-		return 48;
-	}
-}
 
 page12()
 {
@@ -1122,6 +1121,15 @@ page56()
 
 */
 
+// DiceRoll rolls a |d|-sided die |n| times and returns the total.
+func DiceRoll(n, d int) int {
+	var total int
+	for i := 0; i < n; i++ {
+		total += rand.Intn(d) + 1
+	}
+	return total
+}
+
 // GetChar reads a line of input and returns the first byte from that input.
 // This is plain ASCII handling, and UTF-8 encoded input is not supported.
 // It returns '\n' for lines of empty input.
@@ -1138,6 +1146,8 @@ func GetChar() byte {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	s := NewState()
 	s.Instructions()
 	s.More()
