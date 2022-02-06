@@ -26,7 +26,10 @@ import (
 
 var debug = flag.Bool("debug", false, "Turn on debugging mode.")
 
-const MaxKill = 7 // Maximum number of Ultraviolets you can kill.
+const (
+	MaxLives = 6 // Maximum number of player clones.
+	MaxKill  = 7 // Maximum number of Ultraviolets you can kill.
+)
 
 // input provides all of our player input.
 var input = bufio.NewReader(os.Stdin)
@@ -149,6 +152,17 @@ func (s *State) Choose(aPage int, a string, bPage int, b string) int {
 	}
 }
 
+// Exec executes the function for the current page and returns the index of
+// the next page for the player to encounter.
+func (s *State) Exec() int {
+	fmt.Printf("PAGE %d\n", s.Page)
+	next := Pages[s.Page](s)
+	if next != 0 {
+		s.More()
+	}
+	return next
+}
+
 // Instructions presents the instruction page to the player.
 func (s *State) Instructions() {
 	fmt.Print(`
@@ -194,15 +208,30 @@ func (s *State) More() {
 	}
 }
 
-// Exec executes the function for the current page and returns the index of
-// the next page for the player to encounter.
-func (s *State) Exec() int {
-	fmt.Printf("PAGE %d\n", s.Page)
-	next := Pages[s.Page](s)
-	if next != 0 {
-		s.More()
+// NewClone kills the player's current clone and attempts to create a new one
+// starting at the given page.  The return value is the new page number, which
+// is 0 for game over.
+func (s *State) NewClone(page int) int {
+	fmt.Printf("\nClone %d just died.\n", s.Clone)
+	s.Clone++
+
+	if s.Clone > MaxLives {
+		fmt.Print(`
+*** You Lose ***
+
+All your clones are dead.  Your name has been stricken from the records.
+
+			THE END
+`)
+		return 0
 	}
-	return next
+
+	fmt.Printf("Clone %d now activated.\n", s.Clone)
+	s.Flags.Ultraviolet = false
+	s.Flags.ActionDoll = false
+	s.HitPoints = 10
+	s.KillerCount = 0
+	return page
 }
 
 //-----------------------------------------------------------------------------
@@ -215,24 +244,134 @@ type PageFunc func(*State) int
 var Pages = map[int]PageFunc{
 	1: func(*State) int {
 		fmt.Print(`
-  You wake up face down on the red and pink checked E-Z-Kleen linoleum floor.
-  You recognise the pattern, it's the type preferred in the internal security
+You wake up face down on the red and pink checked E-Z-Kleen linoleum floor.
+
+You recognise the pattern, it's the type preferred in the internal security
 briefing cells.  When you finally look around you, you see that you are alone
 in a large mission briefing room.
 `)
 		return 57
 	},
 
+	2: func(s *State) int {
+		fmt.Print(`
+"Greetings," says the kindly Internal Security self incrimination expert who
+meets you at the door, "How are we doing today?"  He offers you a doughnut
+and coffee and asks what brings you here.  This doesn't seem so bad, so you
+tell him that you have come to confess some possible security lapses.  He
+smiles knowingly, deftly catching your coffee as you slump to the floor.
+"Nothing to be alarmed about; it's just the truth serum," he says,
+dragging you back into a discussion room.
+
+The next five hours are a dim haze, but you can recall snatches of conversation
+about your secret society, your mutant power, and your somewhat paranoid
+distrust of The Computer.  This should explain why you are hogtied and moving
+slowly down the conveyer belt towards the meat processing unit in Food
+Services.
+`)
+		if s.Flags.ComputerRequest {
+			return s.NewClone(45)
+		}
+		return s.NewClone(32)
+	},
+
+	3: func(s *State) int {
+		fmt.Print(`
+You walk to the nearest Computer terminal and request more information about
+Christmas.  The Computer says, "That is an A-1 ULTRAVIOLET ONLY IMMEDIATE
+TERMINATION classified topic.  What is your clearance please, Troubleshooter?"
+`)
+		return s.Choose(
+			4, "You give your correct clearance",
+			5, "You lie and claim Ultraviolet clearance")
+	},
+
+	4: func(*State) int {
+		fmt.Print(`
+"That is classified information, Troubleshooter, thank you for your inquiry.
+ Please report to an Internal Security self incrimination station as soon as
+ possible."
+`)
+		return 9
+	},
+
+	5: func(s *State) int {
+		fmt.Print(`
+The computer says, "Troubleshooter, you are not wearing the correct colour
+uniform.  You must put on an Ultraviolet uniform immediately.  I have seen to
+your needs and ordered one already; it will be here shortly.  Please wait with
+your back to the wall until it arrives."  In less than a minute an infrared
+arrives carrying a white bundle.  He asks you to sign for it, then hands it to
+you and stands back, well outside of a fragmentation grenade's blast radius.
+`)
+		return s.Choose(
+			6, "You open the package and put on the uniform",
+			7, "You finally come to your senses and run for it")
+	},
+
+	6: func(s *State) int {
+		fmt.Print(`
+The uniform definitely makes you look snappy and pert.  It really looks
+impressive, and even has the new lopsided lapel fashion that you admire so
+much.  What's more, citizens of all ranks come to obsequious attention as you
+walk past.  This isn't so bad being an Ultraviolet.  You could probably come
+to like it, given time.
+
+The beeping computer terminal interrupts your musings.
+`)
+		s.Flags.Ultraviolet = true
+		return 8
+	},
+
+	7: func(s *State) int {
+		fmt.Print(`
+The corridor lights dim and are replaced by red battle lamps as the Security
+Breach alarms howl all around you.  You run headlong down the corridor and
+desperately windmill around a corner, only to collide with a squad of 12 Blue
+clearance Vulture squadron soldiers.  "Stop, Slime Face," shouts the
+commander, "or there won't be enough of you left for a tissue sample."
+
+"All right, soldiers, stuff the greasy traitor into the uniform," he orders,
+waving the business end of his blue laser scant inches from your nose.
+With his other hand he shakes open a white bundle to reveal a pristine new
+Ultraviolet citizen's uniform.
+
+One of the Vulture squadron Troubleshooters grabs you by the neck in the
+exotic and very painful Vulture Clamp(tm) death grip (you saw a special about
+it on the Teela O'Malley show), while the rest tear off your clothes and
+force you into the Ultraviolet uniform.  The moment you are dressed they step
+clear and stand at attention.
+`)
+		s.More()
+		fmt.Print(`
+"Thank you for your cooperation, sir," says the steely eyed leader of the
+Vulture Squad.  "We will be going about our business now."  With perfect
+timing the Vultures wheel smartly and goosestep down the corridor.
+
+Special Note: don't make the mistake of assuming that your skills have
+improved any because of the uniform; you're only a Red Troubleshooter
+traitorously posing as an Ultraviolet, and don't you forget it!
+
+Suddenly, a computer terminal comes to life beside you.
+`)
+		s.Flags.Ultraviolet = true
+		return 8
+	},
+
 	11: func(s *State) int {
 		fmt.Print(`
 The printing on the folder says "Experimental Self Briefing."
+
 You open it and begin to read the following:
+
 Step 1: Compel the briefing subject to attend the briefing.
         Note: See Experimental Briefing Sub Form Indigo-WY-2,
         'Experimental Self Briefing Subject Acquisition Through The Use Of
          Neurotoxin Room Foggers.'
+
 Step 2: Inform the briefing subject that the briefing has begun.
         ATTENTION: THE BRIEFING HAS BEGUN.
+
 Step 3: Present the briefing material to the briefing subject.
         GREETINGS TROUBLESHOOTER.
         YOU HAVE BEEN SPECIALLY SELECTED TO SINGLEHANDEDLY
@@ -241,13 +380,16 @@ Step 3: Present the briefing material to the briefing subject.
         YOU FIND THERE.  YOU ARE TO INFILTRATE THESE CHRISTMAS CELEBRANTS,
         LOCATE THEIR RINGLEADER, AN UNKNOWN MASTER RETAILER, AND BRING HIM
         BACK FOR EXECUTION AND TRIAL.  THANK YOU.  THE COMPUTER IS YOUR FRIEND.
+`)
+		s.More()
+		fmt.Print(`
 Step 4: Sign the briefing subject's briefing release form to indicate that
         the briefing subject has completed the briefing.
         ATTENTION: PLEASE SIGN YOUR BRIEFING RELEASE FORM.
+
 Step 5: Terminate the briefing
-        ATTENTION: THE BRIEFING IS TERMINATED.`)
-		s.More()
-		fmt.Print(`
+        ATTENTION: THE BRIEFING IS TERMINATED.
+
 You walk to the door and hold your signed briefing release form up to the
 plexiglass window.  A guard scrutinises it for a moment and then slides back
 the megabolts holding the door shut.  You are now free to continue the
@@ -270,116 +412,12 @@ folder on the table top, but you can\'t make out the lettering on it.
 }
 
 /*
-new_clone(resume)
-int resume;
-{
-	printf("\nClone %d just died.\n",clone);
-	if (++clone>6)
-	{
-		printf("\n*** You Lose ***\n\nAll your clones are dead.  Your name has been stricken from the records.\n\n			THE END\n");
-		return 0;
-	}
-	else
-	{
-		printf("Clone %d now activated.\n",clone);
-		ultra_violet=0;
-		action_doll=0;
-		hit_points=10;
-		killer_count=0;
-		return resume;
-	}
-}
-
 dice_roll(number,faces)
 int number, faces;
 {
 	int i,total=0;
 	for(i=number;i>0;i--)	total+= rand()%faces+1;
 	return total;
-}
-
-page2()
-{
-	printf("\"Greetings,\" says the kindly Internal Security self incrimination expert who\n");
-	printf("meets you at the door, \"How are we doing today?\"  He offers you a doughnut\n");
-	printf("and coffee and asks what brings you here.  This doesn\'t seem so bad, so you\n");
-	printf("tell him that you have come to confess some possible security lapses.  He\n");
-	printf("smiles knowingly, deftly catching your coffee as you slump to the floor.\n");
-	printf("\"Nothing to be alarmed about; it\'s just the truth serum,\" he says,\n");
-	printf("dragging you back into a discussion room.\n");
-	printf("The next five hours are a dim haze, but you can recall snatches of conversation\n");
-	printf("about your secret society, your mutant power, and your somewhat paranoid\n");
-	printf("distrust of The Computer.  This should explain why you are hogtied and moving\n");
-	printf("slowly down the conveyer belt towards the meat processing unit in Food\n");
-	printf("Services.\n");
-	if (computer_request==1) return new_clone(45);
-	else 			 return new_clone(32);
-}
-
-page3()
-{
-	printf("You walk to the nearest Computer terminal and request more information about\n");
-	printf("Christmas.  The Computer says, \"That is an A-1 ULTRAVIOLET ONLY IMMEDIATE\n");
-	printf("TERMINATION classified topic.  What is your clearance please, Troubleshooter?\"\n");
-	return choose(4,"You give your correct clearance",5,"You lie and claim Ultraviolet clearance");
-}
-
-page4()
-{
-	printf("\"That is classified information, Troubleshooter, thank you for your inquiry.\n");
-	printf(" Please report to an Internal Security self incrimination station as soon as\n");
-	printf(" possible.\"\n");
-	return 9;
-}
-
-page5()
-{
-	printf("The computer says, \"Troubleshooter, you are not wearing the correct colour\n");
-	printf("uniform.  You must put on an Ultraviolet uniform immediately.  I have seen to\n");
-	printf("your needs and ordered one already; it will be here shortly.  Please wait with\n");
-	printf("your back to the wall until it arrives.\"  In less than a minute an infrared\n");
-	printf("arrives carrying a white bundle.  He asks you to sign for it, then hands it to\n");
-	printf("you and stands back, well outside of a fragmentation grenade\'s blast radius.\n");
-	return choose(6, "You open the package and put on the uniform", 7, "You finally come to your senses and run for it");
-}
-
-page6()
-{
-	printf("The uniform definitely makes you look snappy and pert.  It really looks\n");
-	printf("impressive, and even has the new lopsided lapel fashion that you admire so\n");
-	printf("much.  What\'s more, citizens of all ranks come to obsequious attention as you\n");
-	printf("walk past.  This isn\'t so bad being an Ultraviolet.  You could probably come\n");
-	printf("to like it, given time.\n");
-	printf("The beeping computer terminal interrupts your musings.\n");
-	ultra_violet=1;
-	return 8;
-}
-
-page7()
-{
-	printf("The corridor lights dim and are replaced by red battle lamps as the Security\n");
-	printf("Breach alarms howl all around you.  You run headlong down the corridor and\n");
-	printf("desperately windmill around a corner, only to collide with a squad of 12 Blue\n");
-	printf("clearance Vulture squadron soldiers.  \"Stop, Slime Face,\" shouts the\n");
-	printf("commander, \"or there won\'t be enough of you left for a tissue sample.\"\n");
-	printf("\"All right, soldiers, stuff the greasy traitor into the uniform,\" he orders,\n");
-	printf("waving the business end of his blue laser scant inches from your nose.\n");
-	printf("With his other hand he shakes open a white bundle to reveal a pristine new\n");
-	printf("Ultraviolet citizen's uniform.\n");
-	printf("One of the Vulture squadron Troubleshooters grabs you by the neck in the\n");
-	printf("exotic and very painful Vulture Clamp(tm) death grip (you saw a special about\n");
-	printf("it on the Teela O\'Malley show), while the rest tear off your clothes and\n");
-	printf("force you into the Ultraviolet uniform.  The moment you are dressed they step\n");
-	printf("clear and stand at attention.\n");
-	printf("\"Thank you for your cooperation, sir,\" says the steely eyed leader of the\n");
-	printf("Vulture Squad.  \"We will be going about our business now.\"  With perfect\n");
-	printf("timing the Vultures wheel smartly and goosestep down the corridor.\n");
-	printf("Special Note: don\'t make the mistake of assuming that your skills have\n");
-	printf("improved any because of the uniform; you\'re only a Red Troubleshooter\n");
-	printf("traitorously posing as an Ultraviolet, and don\'t you forget it!\n");
-	printf("Suddenly, a computer terminal comes to life beside you.\n");
-	ultra_violet=1;
-	return 8;
 }
 
 page8()
@@ -1082,73 +1120,6 @@ page56()
 	return choose(33,"You open the door and step through",22,"You go looking for more information");
 }
 
-next_page(this_page)
-int this_page;
-{
-	printf("\n");
-	switch (this_page)
-	{
-	case  0 : return 0;
-	case  1 : return page1();
-	case  2 : return page2();
-	case  3 : return page3();
-	case  4 : return page4();
-	case  5 : return page5();
-	case  6 : return page6();
-	case  7 : return page7();
-	case  8 : return page8();
-	case  9 : return page9();
-	case 10 : return page10();
-	case 11 : return page11();
-	case 12 : return page12();
-	case 13 : return page13();
-	case 14 : return page14();
-	case 15 : return page15();
-	case 16 : return page16();
-	case 17 : return page17();
-	case 18 : return page18();
-	case 19 : return page19();
-	case 20 : return page20();
-	case 21 : return page21();
-	case 22 : return page22();
-	case 23 : return page23();
-	case 24 : return page24();
-	case 25 : return page25();
-	case 26 : return page26();
-	case 27 : return page27();
-	case 28 : return page28();
-	case 29 : return page29();
-	case 30 : return page30();
-	case 31 : return page31();
-	case 32 : return page32();
-	case 33 : return page33();
-	case 34 : return page34();
-	case 35 : return page35();
-	case 36 : return page36();
-	case 37 : return page37();
-	case 38 : return page38();
-	case 39 : return page39();
-	case 40 : return page40();
-	case 41 : return page41();
-	case 42 : return page42();
-	case 43 : return page43();
-	case 44 : return page44();
-	case 45 : return page45();
-	case 46 : return page46();
-	case 47 : return page47();
-	case 48 : return page48();
-	case 49 : return page49();
-	case 50 : return page50();
-	case 51 : return page51();
-	case 52 : return page52();
-	case 53 : return page53();
-	case 54 : return page54();
-	case 55 : return page55();
-	case 56 : return page56();
-	case 57 : return page57();
-	default : break;
-	}
-}
 */
 
 // GetChar reads a line of input and returns the first byte from that input.
