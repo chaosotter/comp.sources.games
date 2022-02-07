@@ -563,30 +563,30 @@ and the elfbot's armour has no effect against your laser.
 		robotHP := 15
 		for i := 0; i < 2; i++ {
 			if DiceRoll(1, 100) <= 25 {
-				fmt.Println("You have been hit!")
+				fmt.Println("\nYou have been hit!")
 				s.HP -= DiceRoll(1, 10)
 				if s.HP <= 0 {
 					return s.NewClone(45)
 				}
 			} else {
-				fmt.Println("It missed you, but not by much!")
+				fmt.Println("\nIt missed you, but not by much!")
 			}
 
 			if DiceRoll(1, 100) <= 40 {
-				fmt.Println("You zapped the little bastard!")
+				fmt.Println("\nYou zapped the little bastard!")
 				robotHP -= DiceRoll(2, 10)
 				if robotHP <= 0 {
-					fmt.Println("You wasted it! Good shooting!")
+					fmt.Println("\nYou wasted it! Good shooting!")
 					goto done
 				}
 			} else {
-				fmt.Println("Damn! You missed!")
+				fmt.Println("\nDamn! You missed!")
 			}
 		}
 
-		fmt.Println("It tried to fire again, but the toy exploded and demolished it.")
+		fmt.Println("\nIt tried to fire again, but the toy exploded and demolished it.")
 	done:
-		fmt.Print("You will need more evidence, so you search GDH7-beta further")
+		fmt.Print("\nYou will need more evidence, so you search GDH7-beta further")
 		if s.HP < 10 {
 			fmt.Print("\nafter the GDH medbot has patched you up")
 		}
@@ -727,6 +727,125 @@ You spend the remaining micro-seconds of your life wondering what you did wrong.
 		return 26
 	},
 
+	29: func(s *State) int {
+		fmt.Print(`
+"Psst, hey citizen, come here.  Pssfft," you hear.  When you peer around
+you can see someone's dim outline in the shadows.  "I got some information
+on the Master Retailer.  It'll only cost you 30 psst credits."
+`)
+		return s.Choose(
+			Choice{30, "You pay the 30 credits for the info"},
+			Choice{31, "You would rather threaten him for the information"},
+			Choice{22, "You ignore him and walk away"},
+		)
+	},
+
+	30: func(s *State) int {
+		fmt.Print(`
+You step into the shadows and offer the man a thirty credit bill.  "Just drop
+it on the floor," he says.  "So you're looking for the Master Retailer, pssfft?
+I've seen him, he's a fat man in a fuzzy red and white jump suit.  They say
+he's a high programmer with no respect for proper security.  If you want to
+find him then pssfft step behind me and go through the door."
+
+Behind the man is a reinforced plasteel blast door.  The centre of it has been
+buckled toward you in a manner you only saw once before when you were field
+testing the rocket assist plasma slingshot (you found it easily portable but
+prone to misfire).  Luckily it isn't buckled too far for you to make out the
+warning sign.  WARNING!! Don't open this door or the same thing will happen to
+you.  Opening this door is a capital offense.  Do not do it.  Not at all. This
+is not a joke.
+`)
+		return s.Choose(
+			Choice{56, "You use your Precognition mutant power on opening the door"},
+			Choice{33, "You just go through the door anyway"},
+			Choice{22, "You decide it's too dangerous and walk away"},
+		)
+	},
+
+	31: func(s *State) int {
+		fmt.Print(`
+Like any good troubleshooter you make the least expensive decision and threaten
+him for information.  With lightning like reflexes you whip out your laser and
+stick it up his nose.  "Talk, you traitorous Christmas celebrator, or who nose
+what will happen to you, yuk yuk," you pun menacingly, and then you notice
+something is very wrong.  He doesn't have a nose.  As a matter of fact he's
+made of one eighth inch cardboard and your laser is sticking through the other
+side of his head.
+
+"Are you going to pay?" says his mouth speaker, "or are you going to pssfft go
+away stupid?"
+`)
+		return s.Choose(
+			Choice{30, "You pay the 30 credits"},
+			Choice{22, "You pssfft go away stupid"},
+		)
+	},
+
+	32: func(*State) int {
+		fmt.Print(`
+Finally it's your big chance to prove that you're as good a troubleshooter
+as your previous clone.  You walk briskly to mission briefing and pick up your
+previous clone's personal effects and notepad.  After reviewing the notes you
+know what has to be done.  You catch the purple line to Goods Distribution Hall
+7-beta and begin to search for the blast door.
+`)
+		return 22
+	},
+
+	33: func(s *State) int {
+		s.Flags.BlastDoor = true
+		fmt.Print(`
+You release the megabolts on the blast door, then strain against it with your
+awesome strength.  Slowly the door creaks open.  You bravely leap through the
+opening and smack your head into the barrel of a 300 mm 'ultra shock' class
+plasma cannon.  It's dark in the barrel now, but just before your head got
+stuck you can remember seeing a group of technicians anxiously watch you leap
+into the room.
+`)
+		if s.Flags.Ultraviolet {
+			return 35
+		}
+		return 36
+	},
+
+	34: func(s *State) int {
+		fmt.Print(`
+You have found a sealed envelope on the body.  You open it and read:
+
+"WARNING: Ultraviolet Clearance ONLY.  DO NOT READ.
+Memo from Chico-U-MRX4 to Harpo-U-MRX5.
+
+The planned takeover of the Troubleshooter Training Course goes well, Comrade.
+Once we have trained the unwitting bourgeois troubleshooters to work as
+communist dupes, the overthrow of Alpha Complex will be unstoppable.  My survey
+of the complex has convinced me that no one suspects a thing; soon it will be
+too late for them to oppose the revolution.  The only thing that could possibly
+impede the people\'s revolution would be someone alerting The Computer to our
+plans (for instance, some enterprising Troubleshooter could tell The Computer
+that the communists have liberated the Troubleshooter Training Course and plan
+to use it as a jumping off point from which to undermine the stability of all
+Alpha Complex), but as we both know, the capitalistic Troubleshooters would
+never serve the interests of the proletariat above their own bourgeois desires.
+
+P.S. I'm doing some Christmas shopping later today.  Would you like me to pick
+you up something?"
+`)
+		s.More()
+		fmt.Print(`
+When you put down the memo you are overcome by that strange deja'vu again.
+You see yourself talking privately with The Computer.  You are telling it all
+about the communists' plan, and then the scene shifts and you see yourself
+showered with awards for foiling the insidious communist plot to take over the
+complex.
+`)
+		s.Flags.ReadLetter = true
+		return s.Choose(
+			Choice{46, "You rush off to the nearest computer terminal to expose the commies"},
+			Choice{22, "You wander off to look for more evidence"},
+		)
+	},
+
 	57: func(s *State) int {
 		fmt.Print(`
 In the centre of the room is a table and a single chair.  There is an Orange
@@ -740,145 +859,6 @@ folder on the table top, but you can't make out the lettering on it.
 }
 
 /*
-page25()
-{
-	printf("Boy, you really can\'t take a hint!\n");
-	printf("They\'re closing in.  Their trigger fingers are twitching, they\'re about to\n");
-	printf("shoot.  This is your last chance.\n");
-	return choose(28,"You tell them it was all just a bad joke",26,"You are going to shoot");
-}
-
-page26()
-{
-	printf("You can read the cold, sober hatred in their eyes (They really didn\'t think\n");
-	printf("it was funny), as they tighten the circle around you.  One of them shoves a\n");
-	printf("blaster up your nose, but that doesn\'t hurt as much as the multi-gigawatt\n");
-	printf("carbonium tipped food drill in the small of your back.\n");
-	printf("You spend the remaining micro-seconds of your life wondering what you did wrong\n");
-	return new_clone(32);
-}
-
-page27()
-{
-	// doesn't exist.  Can't happen with computer version.
-	//   designed to catch dice cheats
-}
-
-page28()
-{
-	printf("They don\'t think it\'s funny.\n");
-	return 26;
-}
-
-page29()
-{
-	printf("\"Psst, hey citizen, come here.  Pssfft,\" you hear.  When you peer around\n");
-	printf("you can see someone\'s dim outline in the shadows.  \"I got some information\n");
-	printf("on the Master Retailer.  It\'ll only cost you 30 psst credits.\"\n");
-	printf("\nSelect \'a\', \'b\' or \'c\' :\n");
-	printf(" a - You pay the 30 credits for the info.\n");
-	printf(" b - You would rather threaten him for the information.\n");
-	printf(" c - You ignore him and walk away.\n");
-	switch(get_char())
-	{
-		case 'a' : return 30;
-		case 'b' : return 31;
-		case 'c' :
-		default  : return 22;
-	}
-}
-
-page30()
-{
-	printf("You step into the shadows and offer the man a thirty credit bill.  \"Just drop\n");
-	printf("it on the floor,\" he says.  \"So you\'re looking for the Master Retailer, pssfft?\n");
-	printf("I\'ve seen him, he\'s a fat man in a fuzzy red and white jump suit.  They say\n");
-	printf("he\'s a high programmer with no respect for proper security.  If you want to\n");
-	printf("find him then pssfft step behind me and go through the door.\"\n");
-	printf("Behind the man is a reinforced plasteel blast door.  The centre of it has been\n");
-	printf("buckled toward you in a manner you only saw once before when you were field\n");
-	printf("testing the rocket assist plasma slingshot (you found it easily portable but\n");
-	printf("prone to misfire).  Luckily it isn\'t buckled too far for you to make out the\n");
-	printf("warning sign.  WARNING!! Don\'t open this door or the same thing will happen to\n");
-	printf("you.  Opening this door is a capital offense.  Do not do it.  Not at all. This\n");
-	printf("is not a joke.\n");
-	printf("\nSelect \'a\', \'b\' or \'c\' :\n");
-	printf(" a - You use your Precognition mutant power on opening the door.\n");
-	printf(" b - You just go through the door anyway.\n");
-	printf(" c - You decide it\'s too dangerous and walk away.\n");
-	switch(get_char())
-	{
-		case 'a' : return 56;
-		case 'b' : return 33;
-		case 'c' :
-		default  : return 22;
-	}
-}
-
-page31()
-{
-	printf("Like any good troubleshooter you make the least expensive decision and threaten\n");
-	printf("him for information.  With lightning like reflexes you whip out your laser and\n");
-	printf("stick it up his nose.  \"Talk, you traitorous Christmas celebrator, or who nose\n");
-	printf("what will happen to you, yuk yuk,\" you pun menacingly, and then you notice\n");
-	printf("something is very wrong.  He doesn\'t have a nose.  As a matter of fact he\'s\n");
-	printf("made of one eighth inch cardboard and your laser is sticking through the other\n");
-	printf("side of his head.  \"Are you going to pay?\" says his mouth speaker,\n");
-	printf("\"or are you going to pssfft go away stupid?\"\n");
-	return choose(30,"You pay the 30 credits",22,"You pssfft go away stupid");
-}
-
-page32()
-{
-	printf("Finally it\'s your big chance to prove that you\'re as good a troubleshooter\n");
-	printf("as your previous clone.  You walk briskly to mission briefing and pick up your\n");
-	printf("previous clone\'s personal effects and notepad.  After reviewing the notes you\n");
-	printf("know what has to be done.  You catch the purple line to Goods Distribution Hall\n");
-	printf("7-beta and begin to search for the blast door.\n");
-	return 22;
-}
-
-page33()
-{
-	blast_door=1;
-	printf("You release the megabolts on the blast door, then strain against it with your\n");
-	printf("awesome strength.  Slowly the door creaks open.  You bravely leap through the\n");
-	printf("opening and smack your head into the barrel of a 300 mm \'ultra shock\' class\n");
-	printf("plasma cannon.  It\'s dark in the barrel now, but just before your head got\n");
-	printf("stuck you can remember seeing a group of technicians anxiously watch you leap\n");
-	printf("into the room.\n");
-	if (ultra_violet==1)	return 35;
-	else			return 36;
-}
-
-page34()
-{
-	printf("You have found a sealed envelope on the body.  You open it and read:\n");
-	printf("\"WARNING: Ultraviolet Clearance ONLY.  DO NOT READ.\n");
-	printf("Memo from Chico-U-MRX4 to Harpo-U-MRX5.\n");
-	printf("The planned takeover of the Troubleshooter Training Course goes well, Comrade.\n");
-	printf("Once we have trained the unwitting bourgeois troubleshooters to work as\n");
-	printf("communist dupes, the overthrow of Alpha Complex will be unstoppable.  My survey\n");
-	printf("of the complex has convinced me that no one suspects a thing; soon it will be\n");
-	printf("too late for them to oppose the revolution.  The only thing that could possibly\n");
-	printf("impede the people\'s revolution would be someone alerting The Computer to our\n");
-	printf("plans (for instance, some enterprising Troubleshooter could tell The Computer\n");
-	printf("that the communists have liberated the Troubleshooter Training Course and plan\n");
-	printf("to use it as a jumping off point from which to undermine the stability of all\n");
-	printf("Alpha Complex), but as we both know, the capitalistic Troubleshooters would\n");
-	printf("never serve the interests of the proletariat above their own bourgeois desires.\n");
-	printf("P.S. I\'m doing some Christmas shopping later today.  Would you like me to pick\n");
-	printf("you up something?\"\n");
-	more();
-	printf("When you put down the memo you are overcome by that strange deja\'vu again.\n");
-	printf("You see yourself talking privately with The Computer.  You are telling it all\n");
-	printf("about the communists\' plan, and then the scene shifts and you see yourself\n");
-	printf("showered with awards for foiling the insidious communist plot to take over the\n");
-	printf("complex.\n");
-	read_letter=1;
-	return choose(46,"You rush off to the nearest computer terminal to expose the commies",22,"You wander off to look for more evidence");
-}
-
 page35()
 {
 	printf("\"Oh master,\" you hear through the gun barrel, \"where have you been? It is\n");
