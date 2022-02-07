@@ -661,6 +661,72 @@ chopping you into teeny, weeny bite size pieces.
 		return s.NewClone(45)
 	},
 
+	22: func(*State) int {
+		fmt.Println("\nYou are searching Goods Distribution Hall 7-beta.")
+		return []int{18, 15, 18, 29}[DiceRoll(1, 4)-1]
+	},
+
+	23: func(s *State) int {
+		fmt.Print(`
+You go to the nearest computer terminal and declare yourself a mutant.
+"A mutant, he's a mutant," yells a previously unnoticed infrared who had
+been looking over your shoulder.  You easily gun him down, but not before a
+dozen more citizens take notice and aim their weapons at you.
+`)
+		return s.Choose(
+			Choice{28, "You tell them that it was really only a bad joke"},
+			Choice{24, "You want to fight it out, one against twelve"},
+		)
+	},
+
+	24: func(s *State) int {
+		fmt.Print(`
+Golly, I never expected someone to pick this.  I haven't even designed
+the 12 citizens who are going to make a sponge out of you.  Tell you what,
+I'll give you a second chance.
+`)
+		return s.Choose(
+			Choice{28, "You change your mind and say it was only a bad joke"},
+			Choice{25, "You REALLY want to shoot it out"},
+		)
+	},
+
+	25: func(s *State) int {
+		fmt.Print(`
+Boy, you really can't take a hint!
+
+They're closing in.  Their trigger fingers are twitching, they're about to
+shoot.  This is your last chance.
+`)
+		return s.Choose(
+			Choice{28, "You tell them it was all just a bad joke"},
+			Choice{26, "You are going to shoot"},
+		)
+	},
+
+	26: func(s *State) int {
+		fmt.Print(`
+You can read the cold, sober hatred in their eyes (they really didn't think
+it was funny), as they tighten the circle around you.  One of them shoves a
+blaster up your nose, but that doesn't hurt as much as the multi-gigawatt
+carbonium tipped food drill in the small of your back.
+
+You spend the remaining micro-seconds of your life wondering what you did wrong.
+`)
+		return s.NewClone(32)
+	},
+
+	27: func(*State) int {
+		// Doesn't exist.  Can't happen with computer version.
+		// Designed to catch dice cheats.
+		return 0
+	},
+
+	28: func(*State) int {
+		fmt.Println("\nThey don't think it's funny.")
+		return 26
+	},
+
 	57: func(s *State) int {
 		fmt.Print(`
 In the centre of the room is a table and a single chair.  There is an Orange
@@ -674,35 +740,6 @@ folder on the table top, but you can't make out the lettering on it.
 }
 
 /*
-page22()
-{
-	printf("You are searching Goods Distribution Hall 7-beta.\n");
-	switch(dice_roll(1,4))
-	{
-		case 1:	return 18;
-		case 2: return 15;
-		case 3: return 18;
-		case 4: return 29;
-	}
-}
-
-page23()
-{
-	printf("You go to the nearest computer terminal and declare yourself a mutant.\n");
-	printf("\"A mutant, he\'s a mutant,\" yells a previously unnoticed infrared who had\n");
-	printf("been looking over your shoulder.  You easily gun him down, but not before a\n");
-	printf("dozen more citizens take notice and aim their weapons at you.\n");
-	return choose(28,"You tell them that it was really only a bad joke",24,"You want to fight it out, one against twelve");
-}
-
-page24()
-{
-	printf("Golly, I never expected someone to pick this.  I haven\'t even designed\n");
-	printf("the 12 citizens who are going to make a sponge out of you.  Tell you what,\n");
-	printf("I\'ll give you a second chance.\n");
-	return choose(28,"You change your mind and say it was only a bad joke",25,"You REALLY want to shoot it out");
-}
-
 page25()
 {
 	printf("Boy, you really can\'t take a hint!\n");
