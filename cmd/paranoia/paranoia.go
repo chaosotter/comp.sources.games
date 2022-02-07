@@ -29,8 +29,9 @@ import (
 var debug = flag.Bool("debug", false, "Turn on debugging mode.")
 
 const (
-	MaxLives = 6 // Maximum number of player clones.
-	MaxKill  = 7 // Maximum number of Ultraviolets you can kill.
+	MaxHP    = 10 // Maximum number of hit points.
+	MaxLives = 6  // Maximum number of player clones.
+	MaxKill  = 7  // Maximum number of Ultraviolets you can kill.
 )
 
 // input provides all of our player input.
@@ -79,8 +80,8 @@ type State struct {
 	// Page holds the current "page number" within the story.
 	Page int
 
-	// HitPoints holds the current number of hit points.
-	HitPoints int
+	// HP holds the current number of hit points.
+	HP int
 
 	// PlatoClone holds the number of the Plato clone.
 	PlatoClone int
@@ -100,7 +101,7 @@ func NewState() *State {
 	return &State{
 		Clone:      1,
 		Page:       1,
-		HitPoints:  10,
+		HP:         MaxHP,
 		PlatoClone: 3,
 		Abilities:  NewAbilities(),
 		Flags:      &Flags{},
@@ -152,7 +153,7 @@ func (s *State) Choose(opts ...Choice) int {
 	}
 
 	for ch := GetChar(); ; ch = GetChar() {
-		if i := ch - 'a'; 0 <= i && i < byte(len(opts)) {
+		if i := ch - 'a'; i < byte(len(opts)) {
 			return opts[i].page
 		}
 	}
@@ -235,7 +236,7 @@ All your clones are dead.  Your name has been stricken from the records.
 	fmt.Printf("Clone %d now activated.\n", s.Clone)
 	s.Flags.Ultraviolet = false
 	s.Flags.ActionDoll = false
-	s.HitPoints = 10
+	s.HP = MaxHP
 	s.KillerCount = 0
 	return page
 }
@@ -553,10 +554,117 @@ But don't let that stop you.
 		return 22
 	},
 
+	17: func(s *State) int {
+		fmt.Print(`
+You whip out your laser and shoot the robot, but not before it squeezes the
+toy at you.  The squeeze toy has the same effect as a cone rifle firing napalm,
+and the elfbot's armour has no effect against your laser.
+`)
+		robotHP := 15
+		for i := 0; i < 2; i++ {
+			if DiceRoll(1, 100) <= 25 {
+				fmt.Println("You have been hit!")
+				s.HP -= DiceRoll(1, 10)
+				if s.HP <= 0 {
+					return s.NewClone(45)
+				}
+			} else {
+				fmt.Println("It missed you, but not by much!")
+			}
+
+			if DiceRoll(1, 100) <= 40 {
+				fmt.Println("You zapped the little bastard!")
+				robotHP -= DiceRoll(2, 10)
+				if robotHP <= 0 {
+					fmt.Println("You wasted it! Good shooting!")
+					goto done
+				}
+			} else {
+				fmt.Println("Damn! You missed!")
+			}
+		}
+
+		fmt.Println("It tried to fire again, but the toy exploded and demolished it.")
+	done:
+		fmt.Print("You will need more evidence, so you search GDH7-beta further")
+		if s.HP < 10 {
+			fmt.Print("\nafter the GDH medbot has patched you up")
+		}
+		fmt.Println(".")
+		s.HP = 10
+		return 22
+	},
+
+	18: func(s *State) int {
+		fmt.Print(`
+You walk to the centre of the hall, ogling like an infrared fresh from the
+clone vats.  Towering before you is the most unearthly thing you have ever
+seen, a green multi armed mutant horror hulking 15 feet above your head.
+Its skeletal body is draped with hundreds of metallic strips (probably to
+negate the effects of some insidious mutant power), and the entire hideous
+creature is wrapped in a thousand blinking hazard lights.  It's times like
+this when you wish you'd had some training for this job.  Luckily the
+creature doesn't take notice of you but stands unmoving, as though waiting for
+a summons from its dark lord, the Master Retailer.
+
+WHAM, suddenly you are struck from behind.
+`)
+		if DiceRoll(2, 10) < s.Abilities.Agility {
+			return 19
+		}
+		return 20
+	},
+
+	19: func(s *State) int {
+		fmt.Print(`
+Quickly you regain your balance, whirl and fire your laser into the Ultraviolet
+citizen behind you.  For a moment your heart leaps to your throat, then you
+realise that he is indeed dead and you will be the only one filing a report on
+this incident.  Besides, he was participating in this traitorous Christmas
+shopping, as is evident from the rain of shoddy toys falling all around you.
+
+Another valorous deed done in the service of The Computer!
+`)
+		s.KillerCount++
+		if s.KillerCount > (MaxKill - s.Clone) {
+			return 21
+		} else if s.Flags.ReadLetter {
+			return 22
+		}
+
+		return s.Choose(
+			Choice{34, "You search the body, keeping an eye open for Internal Security"},
+			Choice{22, "You run away like the cowardly dog you are"},
+		)
+	},
+
+	20: func(*State) int {
+		fmt.Print(`
+Oh no! you can't keep your balance.  You're falling, falling head first into
+the Christmas beast's gaping maw.  It's a valiant struggle; you think you are
+gone when its poisonous needles dig into your flesh, but with a heroic effort
+you jerk a string of lights free and jam the live wires into the creature's
+spine.  The Christmas beast topples to the ground and begins to burn, filling
+the area with a thick acrid smoke.  It takes only a moment to compose yourself,
+and then you are ready to continue your search for the Master Retailer.
+`)
+		return 22
+	},
+
+	21: func(s *State) int {
+		fmt.Print(`
+You have been wasting the leading citizens of Alpha Complex at a prodigious
+rate.  This has not gone unnoticed by the Internal Security squad at GDH7-beta.
+Suddenly, a net of laser beams spear out of the gloomy corners of the hall,
+chopping you into teeny, weeny bite size pieces.
+`)
+		return s.NewClone(45)
+	},
+
 	57: func(s *State) int {
 		fmt.Print(`
 In the centre of the room is a table and a single chair.  There is an Orange
-folder on the table top, but you can\'t make out the lettering on it.
+folder on the table top, but you can't make out the lettering on it.
 `)
 		return s.Choose(
 			Choice{11, "You sit down and read the folder"},
@@ -566,93 +674,6 @@ folder on the table top, but you can\'t make out the lettering on it.
 }
 
 /*
-page17()
-{
-	int i, robot_hp=15;
-	printf("You whip out your laser and shoot the robot, but not before it squeezes the\n");
-	printf("toy at you.  The squeeze toy has the same effect as a cone rifle firing napalm,\n");
-	printf("and the elfbot\'s armour has no effect against your laser.\n");
-	for(i=0;i<2;i++)
-	{
-		if(dice_roll(1,100)<=25)
-		{
-			printf("You have been hit!\n");
-			hit_points-= dice_roll(1,10);
-			if (hit_points<=0)	return new_clone(45);
-		}
-		else	printf("It missed you, but not by much!\n");
-		if(dice_roll(1,100)<=40)
-		{
-			printf("You zapped the little bastard!\n");
-			robot_hp-= dice_roll(2,10);
-			if (robot_hp<=0)
-			{
-				printf("You wasted it! Good shooting!\n");
-				printf("You will need more evidence, so you search GDH7-beta further\n");
-				if (hit_points<10) printf("after the GDH medbot has patched you up.\n");
-				hit_points=10;
-				return 22;
-			}
-		}
-		else	printf("Damn! You missed!\n");
-	};
-	printf("It tried to fire again, but the toy exploded and demolished it.\n");
-	printf("You will need more evidence, so you search GDH7-beta further\n");
-	if (hit_points<10) printf("after the GDH medbot has patched you up.\n");
-	hit_points=10;
-	return 22;
-}
-
-page18()
-{
-	printf("You walk to the centre of the hall, ogling like an infrared fresh from the\n");
-	printf("clone vats.  Towering before you is the most unearthly thing you have ever\n");
-	printf("seen, a green multi armed mutant horror hulking 15 feet above your head.\n");
-	printf("Its skeletal body is draped with hundreds of metallic strips (probably to\n");
-	printf("negate the effects of some insidious mutant power), and the entire hideous\n");
-	printf("creature is wrapped in a thousand blinking hazard lights.  It\'s times like\n");
-	printf("this when you wish you\'d had some training for this job.  Luckily the\n");
-	printf("creature doesn\'t take notice of you but stands unmoving, as though waiting for\n");
-	printf("a summons from its dark lord, the Master Retailer.\n");
-	printf("WHAM, suddenly you are struck from behind.\n");
-	if (dice_roll(2,10)<AGILITY)	return 19;
-	else				return 20;
-}
-
-page19()
-{
-	printf("Quickly you regain your balance, whirl and fire your laser into the Ultraviolet\n");
-	printf("citizen behind you.  For a moment your heart leaps to your throat, then you\n");
-	printf("realise that he is indeed dead and you will be the only one filing a report on\n");
-	printf("this incident.  Besides, he was participating in this traitorous Christmas\n");
-	printf("shopping, as is evident from the rain of shoddy toys falling all around you.\n");
-	printf("Another valorous deed done in the service of The Computer!\n");
-	if (++killer_count>(MAXKILL-clone))	return 21;
-	if (read_letter==1)	return 22;
-	return choose(34,"You search the body, keeping an eye open for Internal Security",22,"You run away like the cowardly dog you are");
-}
-
-page20()
-{
-	printf("Oh no! you can\'t keep your balance.  You\'re falling, falling head first into\n");
-	printf("the Christmas beast\'s gaping maw.  It\'s a valiant struggle; you think you are\n");
-	printf("gone when its poisonous needles dig into your flesh, but with a heroic effort\n");
-	printf("you jerk a string of lights free and jam the live wires into the creature\'s\n");
-	printf("spine.  The Christmas beast topples to the ground and begins to burn, filling\n");
-	printf("the area with a thick acrid smoke.  It takes only a moment to compose yourself,\n");
-	printf("and then you are ready to continue your search for the Master Retailer.\n");
-	return 22;
-}
-
-page21()
-{
-	printf("You have been wasting the leading citizens of Alpha Complex at a prodigious\n");
-	printf("rate.  This has not gone unnoticed by the Internal Security squad at GDH7-beta.\n");
-	printf("Suddenly, a net of laser beams spear out of the gloomy corners of the hall,\n");
-	printf("chopping you into teeny, weeny bite size pieces.\n");
-	return new_clone(45);
-}
-
 page22()
 {
 	printf("You are searching Goods Distribution Hall 7-beta.\n");
