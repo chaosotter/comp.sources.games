@@ -112,7 +112,7 @@ func NewState() *State {
 func (s *State) Character() {
 	t := template.Must(template.New("character").Parse(`
 ===============================================================================
-The Character : Philo-R-DMD {{.Clone}}
+The Character : Philo-R-DMD{{.Clone}}
 Primary Attributes                      Secondary Attributes
 ===============================================================================
 Strength ..................... 13       Carrying Capacity ................. 30
@@ -846,6 +846,92 @@ complex.
 		)
 	},
 
+	35: func(s *State) int {
+		fmt.Print(`
+"Oh master," you hear through the gun barrel, "where have you been?  It is
+time for the great Christmas gifting ceremony.  You had better hurry and get
+the costume on or the trainee may begin to suspect."  For the second time
+today you are forced to wear attire not of your own choosing.  They zip the
+suit to your chin just as you hear gunfire erupt behind you.
+
+"Oh no! Who left the door open?  The commies will get in.  Quick, fire the
+laser cannon or we're all doomed."
+
+"Too late you capitalist swine, the people's revolutionary strike force claims
+this cannon for the proletariat's valiant struggle against oppression.  Take
+that, you running dog imperialist lackey.  ZAP, KAPOW"
+
+Just when you think that things couldn't get worse, "Aha, look what we have
+here, the Master Retailer himself with his head caught in his own cannon.  His
+death will serve as a symbol of freedom for all Alpha Complex.
+
+"Fire the cannon."
+`)
+		return s.NewClone(32)
+	},
+
+	36: func(s *State) int {
+		fmt.Print(`
+"Congratulations, troubleshooter, you have successfully found the lair of the
+Master Retailer and completed the Troubleshooter Training Course test mission,"
+a muffled voice tells you through the barrel.  "Once we dislodge your head
+from the barrel of the 'Ultra Shock' plasma cannon you can begin with the
+training seminars, the first of which will concern the 100% accurate
+identification and elimination of unregistered mutants.  If you have any
+objections please voice them now."
+`)
+		next := s.Choose(
+			Choice{32, "You appreciate his courtesy and voice an objection"},
+			Choice{23, "After your head is removed from the cannon, you register as a mutant"},
+			Choice{37, "After your head is removed from the cannon, you go to the unregistered\n" +
+				"     mutant identification and elimination seminar"},
+		)
+		if next == 32 {
+			return s.NewClone(32)
+		}
+		return next
+	},
+
+	37: func(*State) int {
+		fmt.Print(`
+"Come with me please, Troubleshooter," says the Green clearance technician
+after he has dislodged your head from the cannon.  "You have been participating
+in the Troubleshooter Training Course since you got off the tube car in
+GDH7-beta," he explains as he leads you down a corridor.  "The entire
+Christmas assignment was a test mission to assess your current level of
+training.  You didn't do so well.  We're going to start at the beginning with
+the other student.  Ah, here we are, the mutant identification and elimination
+lecture."  He shows you into a vast lecture hall filled with empty seats.
+
+There is only one other student here, a Troubleshooter near the front row
+playing with his Action Troubleshooter(tm) figure.  "Find a seat and I will
+begin," says the instructor.
+`)
+		return 38
+	},
+
+	38: func(s *State) int {
+		fmt.Printf(`"I am Plato-B-PHI%d, head of mutant propaganda here at the training course.`, s.PlatoClone)
+		fmt.Print(`
+If you have any questions about mutants please come to me.  Today I will be
+talking about mutant detection.  Detecting mutants is very easy.  One simply
+watches for certain tell tale signs, such as the green scaly skin, the third
+arm growing from the forehead, or other similar disfigurements so common with
+their kind.  There are, however, a few rare specimens that show no outward sign
+of their treason.  This has been a significant problem, so our researchers have
+been working on a solution.  I would like a volunteer to test this device,"
+he says, holding up a ray gun looking thing.  "It is a mutant detection ray.
+This little button detects for mutants, and this big button stuns them once
+they are discovered.  Who would like to volunteer for a test?"
+
+The Troubleshooter down the front squirms deeper into his chair.
+`)
+		return s.Choose(
+			Choice{39, "You volunteer for the test"},
+			Choice{40, "You duck behind a chair and hope the instructor doesn't notice you"},
+		)
+	},
+
 	57: func(s *State) int {
 		fmt.Print(`
 In the centre of the room is a table and a single chair.  There is an Orange
@@ -859,81 +945,6 @@ folder on the table top, but you can't make out the lettering on it.
 }
 
 /*
-page35()
-{
-	printf("\"Oh master,\" you hear through the gun barrel, \"where have you been? It is\n");
-	printf("time for the great Christmas gifting ceremony.  You had better hurry and get\n");
-	printf("the costume on or the trainee may begin to suspect.\"  For the second time\n");
-	printf("today you are forced to wear attire not of your own choosing.  They zip the\n");
-	printf("suit to your chin just as you hear gunfire erupt behind you.\n");
-	printf("\"Oh no! Who left the door open?  The commies will get in.  Quick, fire the\n");
-	printf("laser cannon or we\'re all doomed.\"\n");
-	printf("\"Too late you capitalist swine, the people\'s revolutionary strike force claims\n");
-	printf("this cannon for the proletariat\'s valiant struggle against oppression.  Take\n");
-	printf("that, you running dog imperialist lackey.  ZAP, KAPOW\"\n");
-	printf("Just when you think that things couldn\'t get worse, \"Aha, look what we have\n");
-	printf("here, the Master Retailer himself with his head caught in his own cannon.  His\n");
-	printf("death will serve as a symbol of freedom for all Alpha Complex.\n");
-	printf("Fire the cannon.\"\n");
-	return new_clone(32);
-}
-
-page36()
-{
-	printf("\"Congratulations, troubleshooter, you have successfully found the lair of the\n");
-	printf("Master Retailer and completed the Troubleshooter Training Course test mission,\"\n");
-	printf("a muffled voice tells you through the barrel.  \"Once we dislodge your head\n");
-	printf("from the barrel of the \'Ultra Shock\' plasma cannon you can begin with the\n");
-	printf("training seminars, the first of which will concern the 100%% accurate\n");
-	printf("identification and elimination of unregistered mutants.  If you have any\n");
-	printf("objections please voice them now.\"\n");
-	printf("\nSelect \'a\', \'b\' or \'c\' :\n");
-	printf(" a - You appreciate his courtesy and voice an objection.\n");
-	printf(" b - After your head is removed from the cannon, you register as a mutant.\n");
-	printf(" c - After your head is removed from the cannon, you go to the unregistered\n");
-	printf("     mutant identification and elimination seminar.\n");
-	switch(get_char())
-	{
-		case 'a' : return new_clone(32);
-		case 'b' : return 23;
-		case 'c' :
-		default  : return 37;
-	}
-}
-
-page37()
-{
-	printf("\"Come with me please, Troubleshooter,\" says the Green clearance technician\n");
-	printf("after he has dislodged your head from the cannon.  \"You have been participating\n");
-	printf("in the Troubleshooter Training Course since you got off the tube car in\n");
-	printf("GDH7-beta,\" he explains as he leads you down a corridor.  \"The entire\n");
-	printf("Christmas assignment was a test mission to assess your current level of\n");
-	printf("training.  You didn\'t do so well.  We\'re going to start at the beginning with\n");
-	printf("the other student.  Ah, here we are, the mutant identification and elimination\n");
-	printf("lecture.\"  He shows you into a vast lecture hall filled with empty seats.\n");
-	printf("There is only one other student here, a Troubleshooter near the front row\n");
-	printf("playing with his Action Troubleshooter(tm) figure.  \"Find a seat and I will\n");
-	printf("begin,\" says the instructor.\n");
-	return 38;
-}
-
-page38()
-{
-	printf("\"I am Plato-B-PHI%d, head of mutant propaganda here at the training course.\n",plato_clone);
-	printf("If you have any questions about mutants please come to me.  Today I will be\n");
-	printf("talking about mutant detection.  Detecting mutants is very easy.  One simply\n");
-	printf("watches for certain tell tale signs, such as the green scaly skin, the third\n");
-	printf("arm growing from the forehead, or other similar disfigurements so common with\n");
-	printf("their kind.  There are, however, a few rare specimens that show no outward sign\n");
-	printf("of their treason.  This has been a significant problem, so our researchers have\n");
-	printf("been working on a solution.  I would like a volunteer to test this device,\"\n");
-	printf("he says, holding up a ray gun looking thing.  \"It is a mutant detection ray.\n");
-	printf("This little button detects for mutants, and this big button stuns them once\n");
-	printf("they are discovered.  Who would like to volunteer for a test?\"\n");
-	printf("The Troubleshooter down the front squirms deeper into his chair.\n");
-	return choose(39,"You volunteer for the test",40,"You duck behind a chair and hope the instructor doesn\'t notice you");
-}
-
 page39()
 {
 	printf("You bravely volunteer to test the mutant detection gun.  You stand up and walk\n");
