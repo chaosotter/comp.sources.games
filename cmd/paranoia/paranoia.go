@@ -152,6 +152,7 @@ func (s *State) Choose(opts ...Choice) int {
 		fmt.Printf("  %c - %s.\n", 'a'+i, opt.text)
 	}
 
+	fmt.Print("Your choice: ")
 	for ch := GetChar(); ; ch = GetChar() {
 		if i := ch - 'a'; i < byte(len(opts)) {
 			return opts[i].page
@@ -162,7 +163,9 @@ func (s *State) Choose(opts ...Choice) int {
 // Exec executes the function for the current page and returns the index of
 // the next page for the player to encounter.
 func (s *State) Exec() int {
-	fmt.Printf("PAGE %d\n", s.Page)
+	if *debug {
+		fmt.Printf("PAGE %d\n", s.Page)
+	}
 	next := Pages[s.Page](s)
 	if next != 0 {
 		s.More()
@@ -204,10 +207,6 @@ HOW TO WIN:
 // review their character info through the "p" command.
 func (s *State) More() {
 	fmt.Print("\n---------- More ----------")
-	if *debug {
-		fmt.Printf("(page %d)", s.Page)
-	}
-
 	if GetChar() == 'p' {
 		s.Character()
 		fmt.Print("\n---------- More ----------")
@@ -884,7 +883,7 @@ objections please voice them now."
 			Choice{32, "You appreciate his courtesy and voice an objection"},
 			Choice{23, "After your head is removed from the cannon, you register as a mutant"},
 			Choice{37, "After your head is removed from the cannon, you go to the unregistered\n" +
-				"     mutant identification and elimination seminar"},
+				"      mutant identification and elimination seminar"},
 		)
 		if next == 32 {
 			return s.NewClone(32)
@@ -1055,6 +1054,166 @@ activate a computer terminal.  "AT YOUR SERVICE" reads the computer screen.
 		)
 	},
 
+	45: func(*State) int {
+		fmt.Print(`
+"Hrank Hrank," snorts the alarm in your living quarters.  Something is up.
+You look at the monitor above the bathroom mirror and see the message you have
+been waiting for all these years.  "ATTENTION TROUBLESHOOTER, YOU ARE BEING
+ACTIVATED. PLEASE REPORT IMMEDIATELY TO MISSION ASSIGNMENT ROOM A17/GAMMA/LB22.
+THANK YOU. THE COMPUTER IS YOUR FRIEND."  When you arrive at mission
+assignment room A17-gamma/LB22 you are given your previous clone's
+remaining possessions and notebook.  You puzzle through your predecessor's
+cryptic notes, managing to decipher enough to lead you to the tube station and
+the tube car to GDH7-beta.
+`)
+		return 10
+	},
+
+	46: func(s *State) int {
+		fmt.Print(`
+"Why do you ask about the communists, Troubleshooter?  It is not in the
+interest of your continued survival to be asking about such topics," says
+The Computer.
+`)
+		return s.Choose(
+			Choice{53, "You insist on talking about the communists"},
+			Choice{54, "You change the subject"},
+		)
+	},
+
+	47: func(*State) int {
+		fmt.Print(`
+The Computer orders the entire Vulture squadron to terminate the Troubleshooter
+Training Course.  Unfortunately you too are terminated for possessing
+classified information.
+
+Don't act so innocent, we both know that you are an Illuminatus which is in
+itself an act of treason.
+
+Don't look to me for sympathy.
+
+                      THE END
+`)
+		return 0
+	},
+
+	48: func(s *State) int {
+		fmt.Print(`
+The tubecar shoots forward as you enter, slamming you back into a pile of
+garbage.  The front end rotates upward and you, the garbage and the garbage
+disposal car shoot straight up out of Alpha Complex.  One of the last things
+you see is a small blue sphere slowly dwindling behind you.  After you fail to
+report in, you will be assumed dead.
+`)
+		return s.NewClone(45)
+	},
+
+	49: func(s *State) int {
+		fmt.Print(`
+The instructor drags your inert body into a specimen detainment cage.
+"He'll make a good subject for tomorrow's mutant dissection class," you hear.
+`)
+		return s.NewClone(32)
+	},
+
+	50: func(s *State) int {
+		fmt.Print(`
+You put down the other Troubleshooter, and then wisely decide to drill a few
+holes in the instructor as well; the only good witness is a dead witness.
+You continue with the training course.
+`)
+		s.PlatoClone++
+		return 41
+	},
+
+	51: func(s *State) int {
+		fmt.Print(`
+You run for it, but you don't run far.  Three hundred strange and exotic
+weapons turn you into a freeze dried cloud of soot.
+`)
+		return s.NewClone(32)
+	},
+
+	52: func(*State) int {
+		fmt.Print(`
+You wisely wait until the instructor returns with a Blue Internal Security
+guard.  The guard leads you to an Internal Security self incrimination station.
+`)
+		return 2
+	},
+
+	53: func(s *State) int {
+		fmt.Println("\nYou tell The Computer about:")
+		return s.Choose(
+			Choice{47, "The commies who have infiltrated the Troubleshooter Training Course\n" +
+				"      and the impending People's Revolution"},
+			Choice{54, "Something less dangerous"},
+		)
+	},
+
+	54: func(s *State) int {
+		fmt.Print(`
+"Do not try to change the subject, Troubleshooter," says The Computer.
+"It is a serious crime to ask about the communists.  You will be terminated
+immediately.  Thank you for your inquiry.  The Computer is your friend."
+
+Steel bars drop to your left and right, trapping you here in the hallway.
+A spotlight beams from the computer console to brilliantly iiluminate you while
+the speaker above your head rapidly repeats "Traitor, Traitor, Traitor."
+It doesn't take long for a few guards to notice your predicament and come to
+finish you off.
+`)
+		if !s.Flags.BlastDoor {
+			return s.NewClone(45)
+		}
+		return s.NewClone(32)
+	},
+
+	55: func(s *State) int {
+		fmt.Print(`
+You and 300 other excited graduates are marched from the lecture hall and into
+a large auditorium for the graduation exercise.  The auditorium is
+extravagantly decorated in the colours of the graduating class.  Great red and
+green plasti-paper ribbons drape from the walls, while a huge sign reading
+"Congratulations class of GDH7-beta-203.44/A" hangs from the raised stage down
+front.  Once everyone finds a seat the ceremony begins.  Jung-I-PSY is the
+first to speak, "Congratulations students, you have successfully survived the
+Troubleshooter Training Course.  It always brings me great pride to address
+the graduating class, for I know, as I am sure you do too, that you are now
+qualified for the most perilous missions The Computer may select for you.  The
+thanks is not owed to us of the teaching staff, but to all of you, who have
+persevered and graduated.  Good luck and die trying."
+`)
+		s.More()
+		fmt.Printf(`
+Then the instructor begins reading the names of the students who one by one
+walk to the front of the auditorium and receive their diplomas.  Soon it is
+your turn, "Philo-R-DMD, graduating a master of mutant identification and
+secret society infiltration."  You walk up and receive your diploma from
+Plato-B-PHI%d, then return to your seat.  There is another speech after the
+diplomas are handed out, but it is cut short by by rapid fire laser bursts from
+the high spirited graduating class.  You are free to return to your barracks to
+wait, trained and fully qualified, for your next mission.  You also get that
+cherished promotion from the Illuminati secret society.  In a week you receive
+a detailed Training Course bill totalling 1,523 credits.
+
+                        THE END
+`, s.PlatoClone)
+		return 0
+	},
+
+	56: func(s *State) int {
+		fmt.Print(`
+That familiar strange feeling of deja'vu envelops you again.  It is hard to
+say, but whatever is on the other side of the door does not seem to be intended
+for you.
+`)
+		return s.Choose(
+			Choice{33, "You open the door and step through"},
+			Choice{22, "You go looking for more information"},
+		)
+	},
+
 	57: func(s *State) int {
 		fmt.Print(`
 In the centre of the room is a table and a single chair.  There is an Orange
@@ -1066,140 +1225,6 @@ folder on the table top, but you can't make out the lettering on it.
 		)
 	},
 }
-
-/*
-
-page45()
-{
-	printf("\"Hrank Hrank,\" snorts the alarm in your living quarters.  Something is up.\n");
-	printf("You look at the monitor above the bathroom mirror and see the message you have\n");
-	printf("been waiting for all these years.  \"ATTENTION TROUBLESHOOTER, YOU ARE BEING\n");
-	printf("ACTIVATED. PLEASE REPORT IMMEDIATELY TO MISSION ASSIGNMENT ROOM A17/GAMMA/LB22.\n");
-	printf("THANK YOU. THE COMPUTER IS YOUR FRIEND.\"  When you arrive at mission\n");
-	printf("assignment room A17-gamma/LB22 you are given your previous clone\'s\n");
-	printf("remaining possessions and notebook.  You puzzle through your predecessor\'s\n");
-	printf("cryptic notes, managing to decipher enough to lead you to the tube station and\n");
-	printf("the tube car to GDH7-beta.\n");
-	return 10;
-}
-
-page46()
-{
-	printf("\"Why do you ask about the communists, Troubleshooter?  It is not in the\n");
-	printf("interest of your continued survival to be asking about such topics,\" says\n");
-	printf("The Computer.\n");
-	return choose(53,"You insist on talking about the communists",54,"You change the subject");
-}
-
-page47()
-{
-	printf("The Computer orders the entire Vulture squadron to terminate the Troubleshooter\n");
-	printf("Training Course.  Unfortunately you too are terminated for possessing\n");
-	printf("classified information.\n\n");
-	printf("Don\'t act so innocent, we both know that you are an Illuminatus which is in\n");
-	printf("itself an act of treason.\n\n");
-	printf("Don\'t look to me for sympathy.\n\n");
-	printf("			THE END\n");
-	return 0;
-}
-
-page48()
-{
-	printf("The tubecar shoots forward as you enter, slamming you back into a pile of\n");
-	printf("garbage.  The front end rotates upward and you, the garbage and the garbage\n");
-	printf("disposal car shoot straight up out of Alpha Complex.  One of the last things\n");
-	printf("you see is a small blue sphere slowly dwindling behind you.  After you fail to\n");
-	printf("report in, you will be assumed dead.\n");
-	return new_clone(45);
-}
-
-page49()
-{
-	printf("The instructor drags your inert body into a specimen detainment cage.\n");
-	printf("\"He\'ll make a good subject for tomorrow\'s mutant dissection class,\" you hear.\n");
-	return new_clone(32);
-}
-
-page50()
-{
-	printf("You put down the other Troubleshooter, and then wisely decide to drill a few\n");
-	printf("holes in the instructor as well; the only good witness is a dead witness.\n");
-	printf("You continue with the training course.\n");
-	plato_clone++;
-	return 41;
-}
-
-page51()
-{
-	printf("You run for it, but you don\'t run far.  Three hundred strange and exotic\n");
-	printf("weapons turn you into a freeze dried cloud of soot.\n");
-	return new_clone(32);
-}
-
-page52()
-{
-	printf("You wisely wait until the instructor returns with a Blue Internal Security\n");
-	printf("guard.  The guard leads you to an Internal Security self incrimination station.\n");
-	return 2;
-}
-
-page53()
-{
-	printf("You tell The Computer about:\n");
-	return choose(47,"The commies who have infiltrated the Troubleshooter Training Course\n     and the impending People\'s Revolution",54,"Something less dangerous");
-}
-
-page54()
-{
-	printf("\"Do not try to change the subject, Troubleshooter,\" says The Computer.\n");
-	printf("\"It is a serious crime to ask about the communists.  You will be terminated\n");
-	printf("immediately.  Thank you for your inquiry.  The Computer is your friend.\"\n");
-	printf("Steel bars drop to your left and right, trapping you here in the hallway.\n");
-	printf("A spotlight beams from the computer console to brilliantly iiluminate you while\n");
-	printf("the speaker above your head rapidly repeats \"Traitor, Traitor, Traitor.\"\n");
-	printf("It doesn\'t take long for a few guards to notice your predicament and come to\n");
-	printf("finish you off.\n");
-	if (blast_door==0) return new_clone(45);
-	else		   return new_clone(32);
-}
-
-page55()
-{
-	printf("You and 300 other excited graduates are marched  from the lecture hall and into\n");
-	printf("a large auditorium for the graduation exercise.  The auditorium is\n");
-	printf("extravagantly decorated in the colours of the graduating class.  Great red and\n");
-	printf("green plasti-paper ribbons drape from the walls, while a huge sign reading\n");
-	printf("\"Congratulations class of GDH7-beta-203.44/A\" hangs from the raised stage down\n");
-	printf("front.  Once everyone finds a seat the ceremony begins.  Jung-I-PSY is the\n");
-	printf("first to speak, \"Congratulations students, you have successfully survived the\n");
-	printf("Troubleshooter Training Course.  It always brings me great pride to address\n");
-	printf("the graduating class, for I know, as I am sure you do too, that you are now\n");
-	printf("qualified for the most perilous missions The Computer may select for you.  The\n");
-	printf("thanks is not owed to us of the teaching staff, but to all of you, who have\n");
-	printf("persevered and graduated.  Good luck and die trying.\"  Then the instructor\n");
-	printf("begins reading the names of the students who one by one walk to the front of\n");
-	printf("the auditorium and receive their diplomas.  Soon it is your turn,\n");
-	printf("\"Philo-R-DMD, graduating a master of mutant identification and secret society\n");
-	printf("infiltration.\"  You walk up and receive your diploma from Plato-B-PHI%d, then\n",plato_clone);
-	printf("return to your seat.  There is another speech after the diplomas are handed\n");
-	printf("out, but it is cut short by by rapid fire laser bursts from the high spirited\n");
-	printf("graduating class.  You are free to return to your barracks to wait, trained\n");
-	printf("and fully qualified, for your next mission.  You also get that cherished\n");
-	printf("promotion from the Illuminati secret society.  In a week you receive a\n");
-	printf("detailed Training Course bill totalling 1,523 credits.\n");
-	printf("			THE END\n");
-	return 0;
-}
-
-page56()
-{
-	printf("That familiar strange feeling of deja\'vu envelops you again.  It is hard to\n");
-	printf("say, but whatever is on the other side of the door does not seem to be intended\n");
-	printf("for you.\n");
-	return choose(33,"You open the door and step through",22,"You go looking for more information");
-}
-
-*/
 
 // DiceRoll rolls a |d|-sided die |n| times and returns the total.
 func DiceRoll(n, d int) int {
@@ -1222,9 +1247,11 @@ func GetChar() byte {
 	if len(text) == 0 || text[0] == '\r' {
 		return '\n'
 	}
+	fmt.Println()
 	return text[0]
 }
 
+// main starts up a single game.
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
