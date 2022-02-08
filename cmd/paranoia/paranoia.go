@@ -932,6 +932,129 @@ The Troubleshooter down the front squirms deeper into his chair.
 		)
 	},
 
+	39: func(*State) int {
+		fmt.Print(`
+You bravely volunteer to test the mutant detection gun.  You stand up and walk
+down the steps to the podium, passing a very relieved Troubleshooter along the
+way.  When you reach the podium Plato-B-PHI hands you the mutant detection gun
+and says, "Here, aim the gun at that Troubleshooter and push the small button.
+If you see a purple light, stun him."  Grasping the opportunity to prove your
+worth to The Computer, you fire the mutant detection ray at the Troubleshooter.
+A brilliant purple nimbus instantly surrounds his body.  You slip your finger
+to the large stun button and he falls writhing to the floor.
+
+"Good shot," says the instructor as you hand him the mutant detection gun,
+"I'll see that you get a commendation for this.  It seems you have the hang
+of mutant detection and elimination.  You can go on to the secret society
+infiltration class.  I'll see that the little mutie gets packaged for
+tomorrow's mutant dissection class."
+`)
+		return 41
+	},
+
+	40: func(s *State) int {
+		fmt.Print(`
+You breathe a sigh of relief as Plato-B-PHI picks on the other Troubleshooter.
+"You down here in the front," says the instructor pointing at the other
+Troubleshooter, "you'll make a good volunteer.  Please step forward."
+
+The Troubleshooter looks around with a 'who me?' expression on his face, but
+since he is the only one visible in the audience he figures his number is up.
+He walks down to the podium clutching his Action Troubleshooter(tm) doll before
+him like a weapon.  "Here," says Plato-B-PHI, "take the mutant detection ray
+and point it at the audience.  If there are any mutants out there we'll know
+soon enough."  Suddenly your skin prickles with static electricity as a bright
+purple nimbus surrounds your body.  "Ha Ha, got one," says the instructor.
+"Stun him before he gets away."
+`)
+		s.More()
+		for {
+			if DiceRoll(1, 100) <= 30 {
+				fmt.Println("\nHis shot hits you.  You feel numb all over.")
+				return 49
+			}
+			fmt.Println("\nHis shot just missed.")
+
+			if DiceRoll(1, 100) <= 40 {
+				fmt.Println("\nYou just blew his head off.  His lifeless hand drops the mutant detector ray.")
+				return 50
+			}
+			fmt.Println("\nYou burnt a hole in the podium.  He sights the mutant detector ray on you.")
+		}
+	},
+
+	41: func(s *State) int {
+		fmt.Print(`
+You stumble down the hallway of the Troubleshooter Training Course looking for
+your next class.  Up ahead you see one of the instructors waving to you.  When
+you get there he shakes your hand and says, "I am Jung-I-PSY.  Welcome to the
+secret society infiltration seminar.  I hope you ..."  You don't catch the
+rest of his greeting because you're paying too much attention to his handshake;
+it is the strangest thing that has ever been done to your hand, sort of how it
+would feel if you put a neuro whip in a high energy palm massage unit.
+
+It doesn't take you long to learn what he is up to; you feel him briefly shake
+your hand with the secret Illuminati handshake.
+`)
+		return s.Choose(
+			Choice{42, `You respond with the proper Illuminati code phrase, "Ewige Blumenkraft"`},
+			Choice{43, "You ignore this secret society contact"},
+		)
+	},
+
+	42: func(s *State) int {
+		fmt.Print(`
+"Aha, so you are a member of the elitist Illuminati secret society," he says
+loudly, "that is most interesting."  He turns to the large class already
+seated in the auditorium and says, "You see, class, by simply using the correct
+hand shake you can identify the member of any secret society.  Please keep your
+weapons trained on him while I call a guard.
+`)
+		return s.Choose(
+			Choice{51, "You run for it"},
+			Choice{52, "You wait for the guard"},
+		)
+	},
+
+	43: func(s *State) int {
+		fmt.Print(`
+You sit through a long lecture on how to recognise and infiltrate secret
+societies, with an emphasis on mimicking secret handshakes.  The basic theory,
+which you realise to be sound from your Iluminati training, is that with the
+proper handshake you can pass unnoticed in any secret society gathering.
+What's more, the proper handshake will open doors faster than an 'ultra shock'
+plasma cannon.  You are certain that with the information you learn here you
+will easily be promoted to the next level of your Illuminati secret society.
+
+The lecture continues for three hours, during which you have the opportunity
+to practice many different handshakes.  Afterwards everyone is directed to
+attend the graduation ceremony.  Before you must go you have a little time to
+talk to The Computer about, you know, certain topics.
+`)
+		return s.Choose(
+			Choice{44, "You go looking for a computer terminal"},
+			Choice{55, "You go to the graduation ceremony immediately"},
+		)
+	},
+
+	44: func(s *State) int {
+		fmt.Print(`
+You walk down to a semi-secluded part of the training course complex and
+activate a computer terminal.  "AT YOUR SERVICE" reads the computer screen.
+`)
+		if s.Flags.ReadLetter {
+			return s.Choose(
+				Choice{23, "You register yourself as a mutant"},
+				Choice{55, "You change your mind and go to the graduation ceremony"},
+			)
+		}
+		return s.Choose(
+			Choice{23, "You register yourself as a mutant"},
+			Choice{46, "You want to chat about the commies"},
+			Choice{55, "You change your mind and go to the graduation ceremony"},
+		)
+	},
+
 	57: func(s *State) int {
 		fmt.Print(`
 In the centre of the room is a table and a single chair.  There is an Orange
@@ -945,113 +1068,6 @@ folder on the table top, but you can't make out the lettering on it.
 }
 
 /*
-page39()
-{
-	printf("You bravely volunteer to test the mutant detection gun.  You stand up and walk\n");
-	printf("down the steps to the podium, passing a very relieved Troubleshooter along the\n");
-	printf("way.  When you reach the podium Plato-B-PHI hands you the mutant detection gun\n");
-	printf("and says, \"Here, aim the gun at that Troubleshooter and push the small button.\n");
-	printf("If you see a purple light, stun him.\"  Grasping the opportunity to prove your\n");
-	printf("worth to The Computer, you fire the mutant detection ray at the Troubleshooter.\n");
-	printf("A brilliant purple nimbus instantly surrounds his body.  You slip your finger\n");
-	printf("to the large stun button and he falls writhing to the floor.\n");
-	printf("\"Good shot,\" says the instructor as you hand him the mutant detection gun,\n");
-	printf("\"I\'ll see that you get a commendation for this.  It seems you have the hang\n");
-	printf("of mutant detection and elimination.  You can go on to the secret society\n");
-	printf("infiltration class.  I\'ll see that the little mutie gets packaged for\n");
-	printf("tomorrow\'s mutant dissection class.\"\n");
-	return 41;
-}
-
-page40()
-{
-	printf("You breathe a sigh of relief as Plato-B-PHI picks on the other Troubleshooter.\n");
-	printf("\"You down here in the front,\" says the instructor pointing at the other\n");
-	printf("Troubleshooter, \"you\'ll make a good volunteer.  Please step forward.\"\n");
-	printf("The Troubleshooter looks around with a \`who me?\' expression on his face, but\n");
-	printf("since he is the only one visible in the audience he figures his number is up.\n");
-	printf("He walks down to the podium clutching his Action Troubleshooter(tm) doll before\n");
-	printf("him like a weapon.  \"Here,\" says Plato-B-PHI, \"take the mutant detection ray\n");
-	printf("and point it at the audience.  If there are any mutants out there we\'ll know\n");
-	printf("soon enough.\"  Suddenly your skin prickles with static electricity as a bright\n");
-	printf("purple nimbus surrounds your body.  \"Ha Ha, got one,\" says the instructor.\n");
-	printf("\"Stun him before he gets away.\"\n");
-	more();
-	while(1)
-	{
-		if (dice_roll(1,100)<=30)
-		{
-			printf("His shot hits you.  You feel numb all over.\n");
-			return 49;
-		}
-		else	printf("His shot just missed.\n");
-
-		if (dice_roll(1,100)<=40)
-		{
-			printf("You just blew his head off.  His lifeless hand drops the mutant detector ray.\n");
-			return 50;
-		}
-		else	printf("You burnt a hole in the podium.  He sights the mutant detector ray on you.\n");
-	}
-}
-
-page41()
-{
-	printf("You stumble down the hallway of the Troubleshooter Training Course looking for\n");
-	printf("your next class.  Up ahead you see one of the instructors waving to you.  When\n");
-	printf("you get there he shakes your hand and says, \"I am Jung-I-PSY.  Welcome to the\n");
-	printf("secret society infiltration seminar.  I hope you ...\"  You don\'t catch the\n");
-	printf("rest of his greeting because you\'re paying too much attention to his handshake;\n");
-	printf("it is the strangest thing that has ever been done to your hand, sort of how it\n");
-	printf("would feel if you put a neuro whip in a high energy palm massage unit.\n");
-	printf("It doesn\'t take you long to learn what he is up to; you feel him briefly shake\n");
-	printf("your hand with the secret Illuminati handshake.\n");
-	return choose(42,"You respond with the proper Illuminati code phrase, \"Ewige Blumenkraft\"",43,"You ignore this secret society contact");
-}
-
-page42()
-{
-	printf("\"Aha, so you are a member of the elitist Illuminati secret society,\" he says\n");
-	printf("loudly, \"that is most interesting.\"  He turns to the large class already\n");
-	printf("seated in the auditorium and says, \"You see, class, by simply using the correct\n");
-	printf("hand shake you can identify the member of any secret society.  Please keep your\n");
-	printf("weapons trained on him while I call a guard.\n");
-	return choose(51,"You run for it",52,"You wait for the guard");
-}
-
-page43()
-{
-	printf("You sit through a long lecture on how to recognise and infiltrate secret\n");
-	printf("societies, with an emphasis on mimicking secret handshakes.  The basic theory,\n");
-	printf("which you realise to be sound from your Iluminati training, is that with the\n");
-	printf("proper handshake you can pass unnoticed in any secret society gathering.\n");
-	printf("What\'s more, the proper handshake will open doors faster than an \'ultra shock\'\n");
-	printf("plasma cannon.  You are certain that with the information you learn here you\n");
-	printf("will easily be promoted to the next level of your Illuminati secret society.\n");
-	printf("The lecture continues for three hours, during which you have the opportunity\n");
-	printf("to practice many different handshakes.  Afterwards everyone is directed to\n");
-	printf("attend the graduation ceremony.  Before you must go you have a little time to\n");
-	printf("talk to The Computer about, you know, certain topics.\n");
-	return choose(44,"You go looking for a computer terminal",55,"You go to the graduation ceremony immediately");
-}
-
-page44()
-{
-	printf("You walk down to a semi-secluded part of the training course complex and\n");
-	printf("activate a computer terminal.  \"AT YOUR SERVICE\" reads the computer screen.\n");
-	if (read_letter==0)	return choose(23,"You register yourself as a mutant",55,"You change your mind and go to the graduation ceremony");
-	printf("\nSelect \'a\', \'b\' or \'c\' :\n");
-	printf(" a - You register yourself as a mutant.\n");
-	printf(" b - You want to chat about the commies.\n");
-	printf(" c - You change your mind and go to the graduation ceremony.\n");
-	switch(get_char())
-	{
-		case 'a' : return 23;
-		case 'b' : return 46;
-		case 'c' :
-		default  : return 55;
-	}
-}
 
 page45()
 {
