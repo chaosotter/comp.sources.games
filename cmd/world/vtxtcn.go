@@ -35,11 +35,8 @@ var (
 var (
 	z, zbig, zsmall int
 	htext           [2000]int
-	chrbuf          []byte
 	packch          int
 	i, kk, size, kq int
-	u               RecordIndex
-	number, nold    RecordID
 	buffer          [512]int
 	bi              int
 )
@@ -134,20 +131,18 @@ func main() {
 	objdes := MustWrite(*objdesPath)
 
 	fmt.Fprintln(objdes, " short odistb[] = { 0 ")
-	for i := 0; i < 2000; i++ {
-		htext[i] = 0
-	}
 
 	z = 0
 	zbig = 0
 	zsmall = 0
-	u = 0
-	nold = 0
 	bi = 0
 
-	chrbuf = make([]byte, 90)
+	chrbuf := make([]byte, 90)
 	var offsets RecordOffsets
-	for number = 0; number != Sentinel; {
+	var lastID RecordID
+	var rec RecordIndex
+
+	for id := RecordID(0); id != Sentinel; lastID = id {
 		buf, err := vtext.ReadString('\n')
 		copy(chrbuf, []byte(buf))
 		if err != nil {
@@ -173,21 +168,20 @@ func main() {
 			size = 9
 		}
 
-		number = MustNewRecordID(buf)
-		if number != nold {
-			u += 1
+		id = MustNewRecordID(buf)
+		if id != lastID {
+			rec++
 		}
-		offsets.Update(number, u)
-		if number.IsMoveable() {
-			fmt.Fprintf(objdes, "  , %6d \n", u)
-		} else if number.IsFixed() {
-			fmt.Fprintf(objdes, "   , %6d \n", u)
+		offsets.Update(id, rec)
+		if id.IsMoveable() {
+			fmt.Fprintf(objdes, "  , %6d \n", rec)
+		} else if id.IsFixed() {
+			fmt.Fprintf(objdes, "   , %6d \n", rec)
 		}
 
-		if number != nold {
-			htext[u] = z
+		if id != lastID {
+			htext[rec] = z
 		}
-		nold = number
 
 		chrbuf[size] = '{'
 		for i = size + 1; i < 90; i++ {
@@ -245,11 +239,11 @@ func main() {
 
 	dump_buf(q1text)
 	fmt.Fprint(objdes, "  } ; \n")
-	u = ((u + 2) / 3) * 3
-	fmt.Fprintf(qtext, "#define RTSIZE %6d \n", u+1)
+	rec = ((rec + 2) / 3) * 3
+	fmt.Fprintf(qtext, "#define RTSIZE %6d \n", rec+1)
 	fmt.Fprintf(qtext, " unsigned short rtext[] = { 0 \n")
 
-	for kk = 1; kk <= int(u)/3; kk++ {
+	for kk = 1; kk <= int(rec)/3; kk++ {
 		kq = (kk - 1) * 3
 		fmt.Fprintf(qtext, " , %5d, %5d, %5d \n", htext[kq+1], htext[kq+2], htext[kq+3])
 	}
