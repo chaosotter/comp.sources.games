@@ -24,23 +24,19 @@ import (
 )
 
 var (
-	vtextDatPath  = flag.String("vtext_dat_path", "vtext.dat", "Path to the input 'vtext.dat' to index.")
-	qtextIncPath  = flag.String("qtext_inc_path", "qtext.inc", "Path to the output 'qtext.inc' file, which contains text offsets.")
-	objdesIncPath = flag.String("objdes_inc_path", "objdesc.inc", "Path to the output 'objdes.inc' file, which contains object description offset.")
-	gtextIncPath  = flag.String("gtext_inc.path", "gtext.inc", "Path to the output 'gtext.inc' file, which contains the base record numbers for each type.")
-	q1textDatPath = flag.String("q1text_dat_path", "q1text.dat", "Path to the output 'q1text.dat' file, which contains the compressed text strings.")
-	goMode        = flag.Bool("go_mode", false, "If set, generate output for Go rather than the original C output.")
+	vtextPath  = flag.String("vtext_path", "vtext.dat", "Path to the input 'vtext.dat' to index.")
+	qtextPath  = flag.String("qtext_path", "qtext.inc", "Path to the output 'qtext.inc' file, which contains text offsets.")
+	objdesPath = flag.String("objdes_path", "objdesc.inc", "Path to the output 'objdes.inc' file, which contains object description offset.")
+	gtextPath  = flag.String("gtext_path", "gtext.inc", "Path to the output 'gtext.inc' file, which contains the base record numbers for each type.")
+	q1textPath = flag.String("q1text_path", "q1text.dat", "Path to the output 'q1text.dat' file, which contains the compressed text strings.")
+	goMode     = flag.Bool("go_mode", false, "If set, generate output for Go rather than the original C output.")
 )
 
 var (
 	z, zbig, zsmall                  int
 	htext                            [2000]int
-	gtext                            [5]int
+	gtextVals                        [5]int
 	chrbuf                           []byte
-	vtext_dat                        *bufio.Reader
-	qtext_inc, objdes_inc            *bufio.Writer
-	gtext_inc                        *bufio.Writer
-	q1text_dat                       *bufio.Writer
 	packch                           int
 	i, u, kk, nold, size, number, kq int
 	buffer                           [512]int
@@ -66,12 +62,12 @@ func MustWrite(path string) *bufio.Writer {
 }
 
 func main() {
-	vtext_dat = MustRead("vtext.dat")
-	q1text_dat = MustWrite("q1text.dat")
-	qtext_inc = MustWrite("qtext.inc")
-	objdes_inc = MustWrite("objdes.inc")
+	vtext := MustRead(*vtextPath)
+	q1text := MustWrite(*q1textPath)
+	qtext := MustWrite(*qtextPath)
+	objdes := MustWrite(*objdesPath)
 
-	fmt.Fprintln(objdes_inc, " short odistb[] = { 0 ")
+	fmt.Fprintln(objdes, " short odistb[] = { 0 ")
 	for i := 0; i < 2000; i++ {
 		htext[i] = 0
 	}
@@ -85,7 +81,7 @@ func main() {
 
 	chrbuf = make([]byte, 90)
 	for number = 0; number != 9999; {
-		buf, err := vtext_dat.ReadString('\n')
+		buf, err := vtext.ReadString('\n')
 		copy(chrbuf, []byte(buf))
 		if err != nil {
 			log.Fatalf("Could not read vtext.dat: %v", err)
@@ -119,21 +115,21 @@ func main() {
 			u += 1
 		}
 		if number < 1001 {
-			gtext[1] = u
+			gtextVals[1] = u
 		}
 		if number < 2001 {
-			gtext[2] = u
+			gtextVals[2] = u
 		}
 		if number < 3001 {
-			gtext[3] = u
+			gtextVals[3] = u
 		}
 		if number < 9999 {
-			gtext[4] = u
+			gtextVals[4] = u
 		}
 		if number > 3000 && number < 3999 {
-			fmt.Fprintf(objdes_inc, "  , %6d \n", u)
+			fmt.Fprintf(objdes, "  , %6d \n", u)
 		} else if number > 5000 && number < 5999 {
-			fmt.Fprintf(objdes_inc, "   , %6d \n", u)
+			fmt.Fprintf(objdes, "   , %6d \n", u)
 		}
 
 		if number != nold {
@@ -157,7 +153,7 @@ func main() {
 		kk = 8
 		for {
 			if bi == 512 {
-				dump_buf()
+				dump_buf(q1text)
 			}
 			if chrbuf[kk] < '`' || chrbuf[kk+1] < '`' || chrbuf[kk+2] < '`' {
 				packch = -(int(chrbuf[kk]) + (int(chrbuf[kk+1]) << 8))
@@ -195,34 +191,34 @@ func main() {
 		}
 	}
 
-	dump_buf()
-	fmt.Fprint(objdes_inc, "  } ; \n")
+	dump_buf(q1text)
+	fmt.Fprint(objdes, "  } ; \n")
 	u = ((u + 2) / 3) * 3
-	fmt.Fprintf(qtext_inc, "#define RTSIZE %6d \n", u+1)
-	fmt.Fprintf(qtext_inc, " unsigned short rtext[] = { 0 \n")
+	fmt.Fprintf(qtext, "#define RTSIZE %6d \n", u+1)
+	fmt.Fprintf(qtext, " unsigned short rtext[] = { 0 \n")
 
 	for kk = 1; kk <= u/3; kk++ {
 		kq = (kk - 1) * 3
-		fmt.Fprintf(qtext_inc, " , %5d, %5d, %5d \n", htext[kq+1], htext[kq+2], htext[kq+3])
+		fmt.Fprintf(qtext, " , %5d, %5d, %5d \n", htext[kq+1], htext[kq+2], htext[kq+3])
 	}
-	fmt.Fprintf(qtext_inc, "  }; \n")
+	fmt.Fprintf(qtext, "  }; \n")
 
-	q1text_dat.Flush()
-	qtext_inc.Flush()
-	objdes_inc.Flush()
+	q1text.Flush()
+	qtext.Flush()
+	objdes.Flush()
 
-	gtext_inc = MustWrite("gtext.inc")
-	fmt.Fprintf(gtext_inc, "  int gtext[5] = { 0, %6d, %6d, %6d, %6d };\n", gtext[1], gtext[2], gtext[3], gtext[4])
-	gtext_inc.Flush()
+	gtext := MustWrite(*gtextPath)
+	fmt.Fprintf(gtext, "  int gtext[5] = { 0, %6d, %6d, %6d, %6d };\n", gtextVals[1], gtextVals[2], gtextVals[3], gtextVals[4])
+	gtext.Flush()
 
 	fmt.Printf(" packed: %8d unpacked: %8d \n", zsmall, zbig)
 }
 
-func dump_buf() {
+func dump_buf(out *bufio.Writer) {
 	for i := 0; i < 512; i++ {
 		// LSB, then MSB
-		q1text_dat.WriteByte(byte(buffer[i] & 0xff))
-		q1text_dat.WriteByte(byte((buffer[i] & 0xff00 >> 8)))
+		out.WriteByte(byte(buffer[i] & 0xff))
+		out.WriteByte(byte((buffer[i] & 0xff00 >> 8)))
 	}
 	bi = 0
 }
