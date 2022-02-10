@@ -26,7 +26,7 @@ import (
 var (
 	vtextPath  = flag.String("vtext_path", "vtext.dat", "Path to the input 'vtext.dat' to index.")
 	qtextPath  = flag.String("qtext_path", "qtext.inc", "Path to the output 'qtext.inc' file, which contains text offsets.")
-	objdesPath = flag.String("objdes_path", "objdesc.inc", "Path to the output 'objdes.inc' file, which contains object description offsets.")
+	objdesPath = flag.String("objdes_path", "objdes.inc", "Path to the output 'objdes.inc' file, which contains object description offsets.")
 	gtextPath  = flag.String("gtext_path", "gtext.inc", "Path to the output 'gtext.inc' file, which contains the base record numbers for each type.")
 	q1textPath = flag.String("q1text_path", "q1text.dat", "Path to the output 'q1text.dat' file, which contains the compressed text strings.")
 	goMode     = flag.Bool("go_mode", false, "If set, generate output for Go rather than the original C output.")
@@ -60,14 +60,10 @@ func MustNewRecordID(line string) RecordID {
 	return RecordID(val)
 }
 
-// IsMoveable checks if this record ID is for a moveable object.
-func (id RecordID) IsMoveable() bool {
-	return 3000 < id && id < 4000
-}
-
-// IsFixed checks if this record number is for a fixed object.
-func (id RecordID) IsFixed() bool {
-	return 5000 < id && id < 6000
+// IsObject checks if this record ID is for an object, either moveable (3xxx)
+// or fixed (5xxx).
+func (id RecordID) IsObject() bool {
+	return (3000 < id && id < 4000) || (5000 < id && id < 6000)
 }
 
 // A RecordIndex is the 0-based index of a packed record in "v1text.dat".
@@ -104,6 +100,28 @@ func (ro *RecordOffsets) MustWrite(file string) {
 
 //-----------------------------------------------------------------------------
 
+// ObjectTable accumulates the record indices of the objects we encounter.
+type ObjectTable []RecordIndex
+
+// Add adds this record index to the table.
+func (ot *ObjectTable) Add(i RecordIndex) {
+	*ot = append(*ot, i)
+}
+
+// MustWrite outputs the current state of the OffsetTable to the given file,
+// using the selected format.
+func (ot ObjectTable) MustWrite(file string) {
+	out := MustWrite(file)
+	fmt.Fprintln(out, " short odistb[] = { 0 ")
+	for _, rec := range ot {
+		fmt.Fprintf(out, "  , %6d \n", rec)
+	}
+	fmt.Fprint(out, "  } ; \n")
+	out.Flush()
+}
+
+//-----------------------------------------------------------------------------
+
 // MustRead opens the given file for reading or aborts the process.
 func MustRead(path string) *bufio.Reader {
 	f, err := os.Open(path)
@@ -128,9 +146,6 @@ func main() {
 	vtext := MustRead(*vtextPath)
 	q1text := MustWrite(*q1textPath)
 	qtext := MustWrite(*qtextPath)
-	objdes := MustWrite(*objdesPath)
-
-	fmt.Fprintln(objdes, " short odistb[] = { 0 ")
 
 	z = 0
 	zbig = 0
@@ -139,6 +154,7 @@ func main() {
 
 	chrbuf := make([]byte, 90)
 	var offsets RecordOffsets
+	var objects ObjectTable
 	var lastID RecordID
 	var rec RecordIndex
 
@@ -173,10 +189,8 @@ func main() {
 			rec++
 		}
 		offsets.Update(id, rec)
-		if id.IsMoveable() {
-			fmt.Fprintf(objdes, "  , %6d \n", rec)
-		} else if id.IsFixed() {
-			fmt.Fprintf(objdes, "   , %6d \n", rec)
+		if id.IsObject() {
+			objects.Add(rec)
 		}
 
 		if id != lastID {
@@ -238,7 +252,6 @@ func main() {
 	}
 
 	dump_buf(q1text)
-	fmt.Fprint(objdes, "  } ; \n")
 	rec = ((rec + 2) / 3) * 3
 	fmt.Fprintf(qtext, "#define RTSIZE %6d \n", rec+1)
 	fmt.Fprintf(qtext, " unsigned short rtext[] = { 0 \n")
@@ -251,8 +264,8 @@ func main() {
 
 	q1text.Flush()
 	qtext.Flush()
-	objdes.Flush()
 
+	objects.MustWrite(*objdesPath)
 	offsets.MustWrite(*gtextPath)
 
 	fmt.Printf(" packed: %8d unpacked: %8d \n", zsmall, zbig)

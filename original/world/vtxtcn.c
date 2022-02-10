@@ -65,7 +65,7 @@ main()
 	    fprintf(objdes_inc, "  , %6d \n", u);
 	    nnmax = number - 3000;
 	} else if (number > 5000 && number < 5999) {
-	    fprintf(objdes_inc, "   , %6d \n", u);
+	    fprintf(objdes_inc, "  , %6d \n", u);
 	} else;
 	if (number != nold)
 	    htext[u] = z;
