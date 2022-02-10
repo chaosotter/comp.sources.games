@@ -26,22 +26,86 @@ import (
 var (
 	vtextPath  = flag.String("vtext_path", "vtext.dat", "Path to the input 'vtext.dat' to index.")
 	qtextPath  = flag.String("qtext_path", "qtext.inc", "Path to the output 'qtext.inc' file, which contains text offsets.")
-	objdesPath = flag.String("objdes_path", "objdesc.inc", "Path to the output 'objdes.inc' file, which contains object description offset.")
+	objdesPath = flag.String("objdes_path", "objdesc.inc", "Path to the output 'objdes.inc' file, which contains object description offsets.")
 	gtextPath  = flag.String("gtext_path", "gtext.inc", "Path to the output 'gtext.inc' file, which contains the base record numbers for each type.")
 	q1textPath = flag.String("q1text_path", "q1text.dat", "Path to the output 'q1text.dat' file, which contains the compressed text strings.")
 	goMode     = flag.Bool("go_mode", false, "If set, generate output for Go rather than the original C output.")
 )
 
 var (
-	z, zbig, zsmall                  int
-	htext                            [2000]int
-	gtextVals                        [5]int
-	chrbuf                           []byte
-	packch                           int
-	i, u, kk, nold, size, number, kq int
-	buffer                           [512]int
-	bi                               int
+	z, zbig, zsmall int
+	htext           [2000]int
+	chrbuf          []byte
+	packch          int
+	i, kk, size, kq int
+	u               RecordIndex
+	number, nold    RecordID
+	buffer          [512]int
+	bi              int
 )
+
+// A RecordID identifies a particular record ID from "vtext.dat".  These are
+// four-digit numbers, with the leading digit identifying the type of record.
+type RecordID int
+
+// Sentinel is used to identify the end of input in "vtext.dat".
+const Sentinel = RecordID(9999)
+
+// MustNewRecordID extracts the record number from a line of input text from
+// "vtext.dat".  Each line begins with a four-digit record number,
+// left-justified within an eight-column field (e.g., "0056    Blah").
+func MustNewRecordID(line string) RecordID {
+	text := strings.Split(strings.TrimSpace(line), " ")[0]
+	val, err := strconv.Atoi(text)
+	if err != nil {
+		log.Fatalf("invalid record number in %q: %v", line, err)
+	}
+	return RecordID(val)
+}
+
+// IsMoveable checks if this record ID is for a moveable object.
+func (id RecordID) IsMoveable() bool {
+	return 3000 < id && id < 4000
+}
+
+// IsFixed checks if this record number is for a fixed object.
+func (id RecordID) IsFixed() bool {
+	return 5000 < id && id < 6000
+}
+
+// A RecordIndex is the 0-based index of a packed record in "v1text.dat".
+type RecordIndex int
+
+// RecordOffsets contains the initial record index for each class of object in
+// the game (messages, rooms, room names, objects).  The final entry is the
+// total number of records.
+type RecordOffsets [5]RecordIndex
+
+// Update updates the table of initial record indices for the given record ID
+// and index.
+func (ro *RecordOffsets) Update(id RecordID, i RecordIndex) {
+	if id != Sentinel {
+		ro[ro.Class(id)+1] = i
+	}
+}
+
+// Class returns the class of record associated with this ID (message=0, ...).
+func (ro *RecordOffsets) Class(id RecordID) int {
+	if c := int(id) / 1000; c < 3 {
+		return c
+	}
+	return 3
+}
+
+// MustWrite outputs the current state of the RecordOffsets to the given file,
+// using the selected format.
+func (ro *RecordOffsets) MustWrite(file string) {
+	out := MustWrite(file)
+	fmt.Fprintf(out, "  int gtext[5] = { 0, %6d, %6d, %6d, %6d };\n", ro[1], ro[2], ro[3], ro[4])
+	out.Flush()
+}
+
+//-----------------------------------------------------------------------------
 
 // MustRead opens the given file for reading or aborts the process.
 func MustRead(path string) *bufio.Reader {
@@ -60,6 +124,8 @@ func MustWrite(path string) *bufio.Writer {
 	}
 	return bufio.NewWriter(f)
 }
+
+//-----------------------------------------------------------------------------
 
 func main() {
 	vtext := MustRead(*vtextPath)
@@ -80,7 +146,8 @@ func main() {
 	bi = 0
 
 	chrbuf = make([]byte, 90)
-	for number = 0; number != 9999; {
+	var offsets RecordOffsets
+	for number = 0; number != Sentinel; {
 		buf, err := vtext.ReadString('\n')
 		copy(chrbuf, []byte(buf))
 		if err != nil {
@@ -106,29 +173,14 @@ func main() {
 			size = 9
 		}
 
-		number, err = strconv.Atoi(strings.TrimSpace(strings.Split(string(chrbuf), " ")[0]))
-		if err != nil {
-			log.Fatalf("cannot extract number from %q: %v", chrbuf, err)
-		}
-
+		number = MustNewRecordID(buf)
 		if number != nold {
 			u += 1
 		}
-		if number < 1001 {
-			gtextVals[1] = u
-		}
-		if number < 2001 {
-			gtextVals[2] = u
-		}
-		if number < 3001 {
-			gtextVals[3] = u
-		}
-		if number < 9999 {
-			gtextVals[4] = u
-		}
-		if number > 3000 && number < 3999 {
+		offsets.Update(number, u)
+		if number.IsMoveable() {
 			fmt.Fprintf(objdes, "  , %6d \n", u)
-		} else if number > 5000 && number < 5999 {
+		} else if number.IsFixed() {
 			fmt.Fprintf(objdes, "   , %6d \n", u)
 		}
 
@@ -197,7 +249,7 @@ func main() {
 	fmt.Fprintf(qtext, "#define RTSIZE %6d \n", u+1)
 	fmt.Fprintf(qtext, " unsigned short rtext[] = { 0 \n")
 
-	for kk = 1; kk <= u/3; kk++ {
+	for kk = 1; kk <= int(u)/3; kk++ {
 		kq = (kk - 1) * 3
 		fmt.Fprintf(qtext, " , %5d, %5d, %5d \n", htext[kq+1], htext[kq+2], htext[kq+3])
 	}
@@ -207,9 +259,7 @@ func main() {
 	qtext.Flush()
 	objdes.Flush()
 
-	gtext := MustWrite(*gtextPath)
-	fmt.Fprintf(gtext, "  int gtext[5] = { 0, %6d, %6d, %6d, %6d };\n", gtextVals[1], gtextVals[2], gtextVals[3], gtextVals[4])
-	gtext.Flush()
+	offsets.MustWrite(*gtextPath)
 
 	fmt.Printf(" packed: %8d unpacked: %8d \n", zsmall, zbig)
 }
