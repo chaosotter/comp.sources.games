@@ -34,12 +34,13 @@ var (
 
 var (
 	z, zbig, zsmall int
-	htext           [2000]int
 	packch          int
-	i, kk, size, kq int
+	i, kk, size     int
 	buffer          [512]int
 	bi              int
 )
+
+//-----------------------------------------------------------------------------
 
 // A RecordID identifies a particular record ID from "vtext.dat".  These are
 // four-digit numbers, with the leading digit identifying the type of record.
@@ -65,6 +66,8 @@ func MustNewRecordID(line string) RecordID {
 func (id RecordID) IsObject() bool {
 	return (3000 < id && id < 4000) || (5000 < id && id < 6000)
 }
+
+//-----------------------------------------------------------------------------
 
 // A RecordIndex is the 0-based index of a packed record in "v1text.dat".
 type RecordIndex int
@@ -101,21 +104,52 @@ func (rb *RecordBlocks) MustWrite(file string) {
 
 //-----------------------------------------------------------------------------
 
-// ObjectTable accumulates the record indices of the objects we encounter.
-type ObjectTable []RecordIndex
+// RecordOffset is a byte offset into the contents of "q1text.dat".
+type RecordOffset int
 
-// Add adds this record index to the table.
-func (ot *ObjectTable) Add(i RecordIndex) {
-	*ot = append(*ot, i)
+// RecordOffsets accumulates the initial byte offset of every record *after*
+// the first record.
+type RecordOffsets []RecordOffset
+
+// Add adds this record offset to the table.
+func (offs *RecordOffsets) Add(off RecordOffset) {
+	*offs = append(*offs, off)
 }
 
-// MustWrite outputs the current state of the OffsetTable to the given file,
+// MustWrite outputs the current state of the RecordOffsets table to the given
+// file, using the selected format.
+func (offs RecordOffsets) MustWrite(file string) {
+	// Round up to the next multiple of 3 to avoid fragmented lines.
+	recs := ((len(offs) + 2) / 3) * 3
+	offs = append(offs, 0, 0)
+
+	out := MustWrite(file)
+	fmt.Fprintf(out, "#define RTSIZE %6d \n", recs+1)
+	fmt.Fprintf(out, " unsigned short rtext[] = { 0 \n")
+	for i := 0; i < recs; i += 3 {
+		fmt.Fprintf(out, " , %5d, %5d, %5d \n", offs[i], offs[i+1], offs[i+2])
+	}
+	fmt.Fprintf(out, "  }; \n")
+	out.Flush()
+}
+
+//-----------------------------------------------------------------------------
+
+// ObjectIndices accumulates the record indices of the objects we encounter.
+type ObjectIndices []RecordIndex
+
+// Add adds this record index to the table.
+func (is *ObjectIndices) Add(i RecordIndex) {
+	*is = append(*is, i)
+}
+
+// MustWrite outputs the current state of the ObjectIndices to the given file,
 // using the selected format.
-func (ot ObjectTable) MustWrite(file string) {
+func (is ObjectIndices) MustWrite(file string) {
 	out := MustWrite(file)
 	fmt.Fprintln(out, " short odistb[] = { 0 ")
-	for _, rec := range ot {
-		fmt.Fprintf(out, "  , %6d \n", rec)
+	for _, i := range is {
+		fmt.Fprintf(out, "  , %6d \n", i)
 	}
 	fmt.Fprint(out, "  } ; \n")
 	out.Flush()
@@ -146,7 +180,6 @@ func MustWrite(path string) *bufio.Writer {
 func main() {
 	vtext := MustRead(*vtextPath)
 	q1text := MustWrite(*q1textPath)
-	qtext := MustWrite(*qtextPath)
 
 	z = 0
 	zbig = 0
@@ -155,7 +188,8 @@ func main() {
 
 	chrbuf := make([]byte, 90)
 	var blocks RecordBlocks
-	var objects ObjectTable
+	var offsets RecordOffsets
+	var objects ObjectIndices
 	var lastID RecordID
 	var rec RecordIndex
 
@@ -188,7 +222,7 @@ func main() {
 		id = MustNewRecordID(buf)
 		if id != lastID {
 			rec++
-			htext[rec] = z
+			offsets.Add(RecordOffset(z))
 		}
 		blocks.Update(id, rec)
 		if id.IsObject() {
@@ -250,19 +284,9 @@ func main() {
 	}
 
 	dump_buf(q1text)
-	rec = ((rec + 2) / 3) * 3
-	fmt.Fprintf(qtext, "#define RTSIZE %6d \n", rec+1)
-	fmt.Fprintf(qtext, " unsigned short rtext[] = { 0 \n")
-
-	for kk = 1; kk <= int(rec)/3; kk++ {
-		kq = (kk - 1) * 3
-		fmt.Fprintf(qtext, " , %5d, %5d, %5d \n", htext[kq+1], htext[kq+2], htext[kq+3])
-	}
-	fmt.Fprintf(qtext, "  }; \n")
-
 	q1text.Flush()
-	qtext.Flush()
 
+	offsets.MustWrite(*qtextPath)
 	objects.MustWrite(*objdesPath)
 	blocks.MustWrite(*gtextPath)
 
