@@ -36,8 +36,6 @@ var (
 	z, zbig, zsmall int
 	packch          int
 	i, kk, size     int
-	buffer          [512]int
-	bi              int
 )
 
 //-----------------------------------------------------------------------------
@@ -157,6 +155,38 @@ func (is ObjectIndices) MustWrite(file string) {
 
 //-----------------------------------------------------------------------------
 
+// RecordSink is used to accumulate packed data for the generation of
+// "q1text.dat".
+type RecordSink struct {
+	out   *bufio.Writer
+	count int
+}
+
+// MustNewRecordSink creates a new RecordSink for writing to the given file.
+func MustNewRecordSink(file string) *RecordSink {
+	return &RecordSink{out: MustWrite(file)}
+}
+
+// Emit writes another two-byte packed record to the output file.  These
+// packed records are written in Intel byte order (LSB, MSB).
+func (sink *RecordSink) Emit(data int) {
+	sink.out.WriteByte(byte(data & 0x00ff))
+	sink.out.WriteByte(byte(data & 0xff00 >> 8))
+	sink.count++
+}
+
+// Finalize flushes the output and pads it to a 1k boundary, so as to match the
+// behavior of the legacy code.
+func (sink *RecordSink) Finalize() {
+	for i := 0; i < 512-(sink.count%512); i++ {
+		sink.out.WriteByte(0)
+		sink.out.WriteByte(0)
+	}
+	sink.out.Flush()
+}
+
+//-----------------------------------------------------------------------------
+
 // MustRead opens the given file for reading or aborts the process.
 func MustRead(path string) *bufio.Reader {
 	f, err := os.Open(path)
@@ -179,12 +209,11 @@ func MustWrite(path string) *bufio.Writer {
 
 func main() {
 	vtext := MustRead(*vtextPath)
-	q1text := MustWrite(*q1textPath)
+	records := MustNewRecordSink(*q1textPath)
 
 	z = 0
 	zbig = 0
 	zsmall = 0
-	bi = 0
 
 	chrbuf := make([]byte, 90)
 	var blocks RecordBlocks
@@ -244,15 +273,11 @@ func main() {
 
 		kk = 8
 		for {
-			if bi == 512 {
-				dump_buf(q1text)
-			}
 			if chrbuf[kk] < '`' || chrbuf[kk+1] < '`' || chrbuf[kk+2] < '`' {
 				packch = -(int(chrbuf[kk]) + (int(chrbuf[kk+1]) << 8))
-				buffer[bi] = packch
+				records.Emit(packch)
 				kk += 2
 				zbig++
-				bi++
 				z++
 				if chrbuf[kk-1] == '{' || chrbuf[kk-2] == '{' {
 					break
@@ -261,19 +286,17 @@ func main() {
 				packch = int(chrbuf[kk+2]-96)*1024 + int(chrbuf[kk+1]-96)*32 + int(chrbuf[kk]) - 96
 				if (packch&0377) == 10 || ((packch>>8)&0377) == 10 {
 					packch = -(int(chrbuf[kk]) + (int(chrbuf[kk+1]) << 8))
-					buffer[bi] = packch
+					records.Emit(packch)
 					kk += 2
 					zbig++
-					bi++
 					z++
 					if chrbuf[kk-1] == '{' || chrbuf[kk-2] == '{' {
 						break
 					}
 				} else {
-					buffer[bi] = packch
+					records.Emit(packch)
 					kk += 3
 					zsmall++
-					bi++
 					z++
 					if chrbuf[kk-1] == '{' || chrbuf[kk-2] == '{' || chrbuf[kk-3] == '{' {
 						break
@@ -283,21 +306,10 @@ func main() {
 		}
 	}
 
-	dump_buf(q1text)
-	q1text.Flush()
-
+	records.Finalize()
 	offsets.MustWrite(*qtextPath)
 	objects.MustWrite(*objdesPath)
 	blocks.MustWrite(*gtextPath)
 
 	fmt.Printf(" packed: %8d unpacked: %8d \n", zsmall, zbig)
-}
-
-func dump_buf(out *bufio.Writer) {
-	for i := 0; i < 512; i++ {
-		// LSB, then MSB
-		out.WriteByte(byte(buffer[i] & 0xff))
-		out.WriteByte(byte((buffer[i] & 0xff00 >> 8)))
-	}
-	bi = 0
 }
