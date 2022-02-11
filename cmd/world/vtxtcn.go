@@ -69,32 +69,33 @@ func (id RecordID) IsObject() bool {
 // A RecordIndex is the 0-based index of a packed record in "v1text.dat".
 type RecordIndex int
 
-// RecordOffsets contains the initial record index for each class of object in
+// RecordBlocks contains the initial record index for each block of object in
 // the game (messages, rooms, room names, objects).  The final entry is the
 // total number of records.
-type RecordOffsets [5]RecordIndex
+type RecordBlocks [5]RecordIndex
 
 // Update updates the table of initial record indices for the given record ID
 // and index.
-func (ro *RecordOffsets) Update(id RecordID, i RecordIndex) {
+func (rb *RecordBlocks) Update(id RecordID, i RecordIndex) {
 	if id != Sentinel {
-		ro[ro.Class(id)+1] = i
+		rb[block(id)+1] = i
 	}
 }
 
-// Class returns the class of record associated with this ID (message=0, ...).
-func (ro *RecordOffsets) Class(id RecordID) int {
+// block returns the block for the record associated with this ID
+// (message=0, ...).
+func block(id RecordID) int {
 	if c := int(id) / 1000; c < 3 {
 		return c
 	}
 	return 3
 }
 
-// MustWrite outputs the current state of the RecordOffsets to the given file,
+// MustWrite outputs the current state of the RecordBlocks to the given file,
 // using the selected format.
-func (ro *RecordOffsets) MustWrite(file string) {
+func (rb *RecordBlocks) MustWrite(file string) {
 	out := MustWrite(file)
-	fmt.Fprintf(out, "  int gtext[5] = { 0, %6d, %6d, %6d, %6d };\n", ro[1], ro[2], ro[3], ro[4])
+	fmt.Fprintf(out, "  int gtext[5] = { 0, %6d, %6d, %6d, %6d };\n", rb[1], rb[2], rb[3], rb[4])
 	out.Flush()
 }
 
@@ -153,7 +154,7 @@ func main() {
 	bi = 0
 
 	chrbuf := make([]byte, 90)
-	var offsets RecordOffsets
+	var blocks RecordBlocks
 	var objects ObjectTable
 	var lastID RecordID
 	var rec RecordIndex
@@ -187,14 +188,11 @@ func main() {
 		id = MustNewRecordID(buf)
 		if id != lastID {
 			rec++
+			htext[rec] = z
 		}
-		offsets.Update(id, rec)
+		blocks.Update(id, rec)
 		if id.IsObject() {
 			objects.Add(rec)
-		}
-
-		if id != lastID {
-			htext[rec] = z
 		}
 
 		chrbuf[size] = '{'
@@ -266,7 +264,7 @@ func main() {
 	qtext.Flush()
 
 	objects.MustWrite(*objdesPath)
-	offsets.MustWrite(*gtextPath)
+	blocks.MustWrite(*gtextPath)
 
 	fmt.Printf(" packed: %8d unpacked: %8d \n", zsmall, zbig)
 }
